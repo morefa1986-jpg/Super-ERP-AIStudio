@@ -1,0 +1,17 @@
+{
+  "short_name": "FATHI ERP",
+  "name": "FATHI AQUA SUPER ERP - سامانه هوشمند پرورش ماهیان خاویاری",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#070B14",
+  "background_color": "#070B14",
+  "dir": "rtl",
+  "lang": "fa"
+}

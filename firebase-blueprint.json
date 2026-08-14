@@ -1,0 +1,80 @@
+{
+  "entities": [
+    {
+      "name": "Pool",
+      "collection": "pools",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "hallId", "type": "number", "required": true },
+        { "name": "count", "type": "number", "required": true },
+        { "name": "avgWeightGrams", "type": "number", "required": true },
+        { "name": "totalBiomassKg", "type": "number", "required": true }
+      ]
+    },
+    {
+      "name": "Hall",
+      "collection": "halls",
+      "fields": [
+        { "name": "id", "type": "number", "required": true },
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "WaterTestLog",
+      "collection": "labTests",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "FeedingMeal",
+      "collection": "feedings",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "MortalityLog",
+      "collection": "mortalities",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "MovementLog",
+      "collection": "movements",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "SonographyLog",
+      "collection": "sonographies",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "AuditLog",
+      "collection": "auditLogs",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "AppNotification",
+      "collection": "notifications",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+    {
+      "name": "User",
+      "collection": "users",
+      "fields": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,624 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Vazirmatn:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --font-family-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  /* Stunning 3D Futuristic Glassmorphism Dark Theme */
+  --natural-bg: #070B14;
+  --natural-text: #F1F5F9;
+  --natural-dark: #FFFFFF;
+  --natural-forest: #06B6D4; /* Cyan neon glow */
+  --natural-forest-hover: #22D3EE;
+  --natural-earth: #8B5CF6; /* Violet neon glow */
+  --natural-clay: #EF4444; /* Alert red */
+  --natural-khaki: rgba(255, 255, 255, 0.04); /* Frosted glass card */
+  --natural-border: rgba(255, 255, 255, 0.12); /* Glass border */
+}
+
+.light {
+  /* Classic Warm Light Mode - Optimized for high accessibility and mobile legibility */
+  --natural-bg: #FCFAF4;
+  --natural-text: #172B24; /* Deeper, rich forest charcoal */
+  --natural-dark: #0A1410; /* Very deep dark color for high accessibility */
+  --natural-forest: #1A3E31; /* Deep visible forest green */
+  --natural-forest-hover: #112B21;
+  --natural-earth: #725B3E; /* Richer amber/gold */
+  --natural-clay: #9B3B2B; /* Deeper alert red */
+  --natural-khaki: #EFEADA; /* Stronger card contrast background */
+  --natural-border: #C8BF9F; /* Better border definition */
+}
+
+/* 🔧 High Contrast and Readability Overrides for Light Mode */
+.light {
+  input, select, textarea {
+    background-color: #FFFFFF !important;
+    color: #0A1410 !important;
+    border-color: #A39A7D !important;
+  }
+  
+  ::placeholder {
+    color: #4A5E55 !important; /* Highly visible placeholder contrast */
+    opacity: 1 !important;
+  }
+
+  /* Make secondary text labels and gray tones fully readable in light mode */
+  .text-gray-400, .text-slate-400, .text-neutral-400,
+  .text-gray-500, .text-slate-500, .text-neutral-500 {
+    color: #2D4039 !important; /* Visible, elegant dark green-charcoal */
+  }
+
+  .text-gray-300, .text-slate-300, .text-neutral-300 {
+    color: #4A5A52 !important; /* High contrast fallback for lighter grays */
+  }
+
+  .text-gray-600, .text-slate-600, .text-neutral-600,
+  .text-gray-700, .text-slate-700, .text-neutral-700 {
+    color: #172B24 !important; /* Deep dark text */
+  }
+
+  /* Boost opacity-based text classes */
+  .text-natural-text\/30 {
+    color: rgba(23, 43, 36, 0.65) !important;
+  }
+  .text-natural-text\/35 {
+    color: rgba(23, 43, 36, 0.68) !important;
+  }
+  .text-natural-text\/40 {
+    color: rgba(23, 43, 36, 0.72) !important;
+  }
+  .text-natural-text\/45 {
+    color: rgba(23, 43, 36, 0.75) !important;
+  }
+  .text-natural-text\/50 {
+    color: rgba(23, 43, 36, 0.78) !important;
+  }
+  .text-natural-text\/55 {
+    color: rgba(23, 43, 36, 0.81) !important;
+  }
+  .text-natural-text\/60 {
+    color: rgba(23, 43, 36, 0.84) !important;
+  }
+  .text-natural-text\/65 {
+    color: rgba(23, 43, 36, 0.87) !important;
+  }
+  .text-natural-text\/70 {
+    color: rgba(23, 43, 36, 0.90) !important;
+  }
+  .text-natural-text\/75 {
+    color: rgba(23, 43, 36, 0.93) !important;
+  }
+  .text-natural-text\/80 {
+    color: rgba(23, 43, 36, 0.96) !important;
+  }
+  .text-natural-text\/85 {
+    color: rgba(23, 43, 36, 0.98) !important;
+  }
+
+  /* Boost white text over dark backgrounds */
+  .text-white\/60, .text-white\/70, .text-white\/75, .text-white\/80 {
+    color: rgba(255, 255, 255, 0.98) !important;
+  }
+}
+
+/* Swap font order for English/German/etc. */
+.lang-en, .lang-de, [dir="ltr"] {
+  --font-family-sans: "Inter", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  --font-sans: var(--font-family-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Natural Tones palette definitions */
+  --color-natural-bg: var(--natural-bg);
+  --color-natural-text: var(--natural-text);
+  --color-natural-dark: var(--natural-dark);
+  --color-natural-forest: var(--natural-forest);
+  --color-natural-forest-hover: var(--natural-forest-hover);
+  --color-natural-earth: var(--natural-earth);
+  --color-natural-clay: var(--natural-clay);
+  --color-natural-khaki: var(--natural-khaki);
+  --color-natural-border: var(--natural-border);
+}
+
+/* Custom styles for professional scroll bars to fit theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--natural-khaki);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--natural-border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--natural-earth);
+}
+
+/* Base custom font configuration to match warm, rustic presentation */
+body {
+  background-color: var(--natural-bg);
+  color: var(--natural-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 🔧 High Contrast and Readability Overrides for Default Dark Mode */
+html:not(.light) {
+  /* Style all native form controls, inputs, select boxes, and textareas */
+  input, select, textarea {
+    background-color: var(--natural-khaki) !important;
+    color: #FFFFFF !important;
+    border-color: var(--natural-border) !important;
+  }
+
+  ::placeholder {
+    color: #94A3B8 !important; /* visible light gray placeholder */
+    opacity: 1 !important;
+  }
+  
+  /* Override Tailwind utility classes that specify white or very light backgrounds */
+  .bg-white,
+  .bg-\[\#FDFCF8\],
+  .bg-\[\#FAF9F5\],
+  .bg-\[\#FAF0E6\],
+  .bg-\[\#F5F2E8\],
+  .bg-\[\#FAF9F5\],
+  .bg-\[\#FAF0E6\],
+  .bg-\[\#F5F2E8\],
+  .bg-[#FDFCF8],
+  .bg-[#FAF9F5],
+  .bg-[#FAF0E6],
+  .bg-[#F5F2E8],
+  .bg-neutral-50,
+  .bg-neutral-100,
+  .bg-neutral-200,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-gray-200,
+  .bg-slate-50,
+  .bg-slate-100,
+  .bg-slate-200 {
+    background-color: var(--natural-khaki) !important;
+  }
+
+  /* Map the bg-natural-dark utility to a deep dark background instead of white in dark mode */
+  .bg-natural-dark {
+    background-color: var(--natural-bg) !important;
+  }
+
+  /* Make inner cards with bg-[#FAF9F5] have a deeper background to contrast nicely with the column's bg */
+  .bg-\[\#FAF9F5\],
+  .bg-[#FAF9F5],
+  .bg-\[\#FAF9F5\]\/50,
+  .bg-[#FAF9F5]/50,
+  .bg-[#FAF9F5]/80,
+  .bg-white\/80 {
+    background-color: var(--natural-bg) !important;
+  }
+  
+  /* Ensure text utility classes representing dark text on overridden elements become readable white */
+  .text-natural-dark {
+    color: #FFFFFF !important;
+  }
+  
+  /* Convert dark gray/slate/neutral/zinc/stone texts to high-contrast white or light gray */
+  .text-gray-600,
+  .text-gray-700,
+  .text-gray-800,
+  .text-gray-900,
+  .text-gray-950,
+  .text-slate-600,
+  .text-slate-700,
+  .text-slate-800,
+  .text-slate-900,
+  .text-slate-950,
+  .text-neutral-600,
+  .text-neutral-700,
+  .text-neutral-800,
+  .text-neutral-900,
+  .text-neutral-950,
+  .text-zinc-600,
+  .text-zinc-700,
+  .text-zinc-800,
+  .text-zinc-900,
+  .text-zinc-950,
+  .text-stone-600,
+  .text-stone-700,
+  .text-stone-800,
+  .text-stone-900,
+  .text-stone-950 {
+    color: #FFFFFF !important;
+  }
+
+  .text-gray-500,
+  .text-neutral-500,
+  .text-slate-500,
+  .text-zinc-500,
+  .text-stone-500,
+  .text-gray-400,
+  .text-neutral-400,
+  .text-slate-400,
+  .text-zinc-400,
+  .text-stone-400 {
+    color: #CBD5E1 !important; /* high contrast bright gray-blue */
+  }
+
+  /* Blues, Indigos, Skies, Cyans, Violets: Map dark to high-contrast pastel blue/cyan */
+  .text-blue-600,
+  .text-blue-700,
+  .text-blue-750,
+  .text-blue-800,
+  .text-blue-900,
+  .text-blue-950,
+  .text-indigo-600,
+  .text-indigo-700,
+  .text-indigo-750,
+  .text-indigo-800,
+  .text-indigo-900,
+  .text-indigo-950,
+  .text-sky-600,
+  .text-sky-700,
+  .text-sky-750,
+  .text-sky-800,
+  .text-sky-900,
+  .text-sky-950,
+  .text-cyan-600,
+  .text-cyan-700,
+  .text-cyan-750,
+  .text-cyan-800,
+  .text-cyan-900,
+  .text-cyan-950,
+  .text-violet-600,
+  .text-violet-700,
+  .text-violet-750,
+  .text-violet-800,
+  .text-violet-900,
+  .text-violet-950 {
+    color: #93C5FD !important; /* bright light blue */
+  }
+
+  /* Greens, Emeralds, Teals: Map dark to high-contrast mint green/teal */
+  .text-green-600,
+  .text-green-700,
+  .text-green-750,
+  .text-green-800,
+  .text-green-900,
+  .text-green-950,
+  .text-emerald-600,
+  .text-emerald-700,
+  .text-emerald-750,
+  .text-emerald-800,
+  .text-emerald-900,
+  .text-emerald-950,
+  .text-teal-600,
+  .text-teal-700,
+  .text-teal-750,
+  .text-teal-800,
+  .text-teal-900,
+  .text-teal-950 {
+    color: #34D399 !important; /* high-contrast bright teal */
+  }
+
+  /* Reds, Roses, Pinks: Map dark to high-contrast rose/pink */
+  .text-red-600,
+  .text-red-700,
+  .text-red-750,
+  .text-red-800,
+  .text-red-900,
+  .text-red-950,
+  .text-rose-600,
+  .text-rose-700,
+  .text-rose-750,
+  .text-rose-800,
+  .text-rose-900,
+  .text-rose-950,
+  .text-pink-600,
+  .text-pink-700,
+  .text-pink-750,
+  .text-pink-800,
+  .text-pink-900,
+  .text-pink-950 {
+    color: #FCA5A5 !important; /* high-contrast bright rose/red */
+  }
+
+  /* Ambers, Yellows, Oranges: Map dark to high-contrast light yellow/amber */
+  .text-amber-500,
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-750,
+  .text-amber-800,
+  .text-amber-900,
+  .text-amber-950,
+  .text-yellow-500,
+  .text-yellow-600,
+  .text-yellow-700,
+  .text-yellow-750,
+  .text-yellow-800,
+  .text-yellow-900,
+  .text-yellow-950,
+  .text-orange-500,
+  .text-orange-600,
+  .text-orange-700,
+  .text-orange-750,
+  .text-orange-800,
+  .text-orange-900,
+  .text-orange-950 {
+    color: #FDE68A !important; /* high-contrast golden yellow */
+  }
+
+  /* Boost opacity-based text classes in dark mode */
+  .text-natural-text\/30 {
+    color: rgba(241, 245, 249, 0.65) !important;
+  }
+  .text-natural-text\/35 {
+    color: rgba(241, 245, 249, 0.68) !important;
+  }
+  .text-natural-text\/40 {
+    color: rgba(241, 245, 249, 0.72) !important;
+  }
+  .text-natural-text\/45 {
+    color: rgba(241, 245, 249, 0.75) !important;
+  }
+  .text-natural-text\/50 {
+    color: rgba(241, 245, 249, 0.78) !important;
+  }
+  .text-natural-text\/55 {
+    color: rgba(241, 245, 249, 0.81) !important;
+  }
+  .text-natural-text\/60 {
+    color: rgba(241, 245, 249, 0.84) !important;
+  }
+  .text-natural-text\/65 {
+    color: rgba(241, 245, 249, 0.87) !important;
+  }
+  .text-natural-text\/70 {
+    color: rgba(241, 245, 249, 0.90) !important;
+  }
+  .text-natural-text\/75 {
+    color: rgba(241, 245, 249, 0.93) !important;
+  }
+  .text-natural-text\/80 {
+    color: rgba(241, 245, 249, 0.96) !important;
+  }
+  .text-natural-text\/85 {
+    color: rgba(241, 245, 249, 0.98) !important;
+  }
+  
+  /* Overrides for hardcoded dark colors to make them high contrast on dark backgrounds */
+  .text-\[\#1A2E26\],
+  .text-\[\#2D4A3E\],
+  .text-\[\#12231B\],
+  .text-\[\#2D4A3E\]\/60,
+  .text-\[\#2D4A3E\]\/80 {
+    color: #A7F3D0 !important; /* light mint green */
+  }
+
+  .text-\[\#7E6547\],
+  .text-\[\#8C6A43\] {
+    color: #FDE68A !important; /* light yellow-gold */
+  }
+
+  .text-\[\#A65D50\],
+  .text-\[\#A65D50\]\/80 {
+    color: #FCA5A5 !important; /* light rose/red */
+  }
+
+  .text-\[\#0A5C36\] {
+    color: #86EFAC !important; /* light bright green */
+  }
+
+  .text-\[\#D68227\] {
+    color: #FCD34D !important; /* high-contrast golden-yellow */
+  }
+
+  /* Make sure hover text colors on sidebar buttons are high-contrast pastel colors on hover in dark mode */
+  .hover\:text-emerald-900:hover,
+  .hover\:text-emerald-950:hover {
+    color: #A7F3D0 !important;
+  }
+  .hover\:text-indigo-900:hover,
+  .hover\:text-indigo-950:hover {
+    color: #C7D2FE !important;
+  }
+  .hover\:text-rose-800:hover,
+  .hover\:text-rose-900:hover,
+  .hover\:text-rose-950:hover {
+    color: #FECDD3 !important;
+  }
+  .hover\:text-sky-900:hover,
+  .hover\:text-sky-950:hover {
+    color: #BAE6FD !important;
+  }
+  .hover\:text-cyan-800:hover,
+  .hover\:text-cyan-900:hover,
+  .hover\:text-cyan-950:hover {
+    color: #A5F3FC !important;
+  }
+  .hover\:text-amber-800:hover,
+  .hover\:text-amber-900:hover,
+  .hover\:text-amber-950:hover {
+    color: #FDE68A !important;
+  }
+  .hover\:text-\[\#8C6A43\]:hover {
+    color: #FDE68A !important;
+  }
+  .hover\:text-\[\#D68227\]:hover {
+    color: #FCD34D !important;
+  }
+
+  .text-emerald-400\/50, .text-emerald-400\/40 {
+    color: rgba(52, 211, 153, 0.92) !important;
+  }
+  
+  /* Convert dark alert texts inside colored badges to light, high-contrast equivalents */
+  .text-red-800,
+  .text-red-900,
+  .text-red-700 {
+    color: #FF8F8F !important; /* vivid high-contrast red */
+  }
+  
+  .text-emerald-800,
+  .text-emerald-900,
+  .text-emerald-700 {
+    color: #5EEAD4 !important; /* vivid high-contrast teal */
+  }
+  
+  .text-amber-800,
+  .text-amber-900,
+  .text-amber-700 {
+    color: #FCD34D !important; /* light soft amber */
+  }
+  
+  /* Select drop-down option elements */
+  option {
+    background-color: var(--natural-bg) !important;
+    color: var(--natural-text) !important;
+  }
+  
+  /* Ambient dark amber background inside badges */
+  .bg-amber-100 {
+    background-color: #3F2C00 !important;
+    color: #FBBF24 !important;
+  }
+
+  /* High contrast dark backgrounds for pastel alert divs */
+  .bg-emerald-50, .bg-emerald-50\/30 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #34D399 !important;
+  }
+  .bg-red-50, .bg-red-50\/30 {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: #F87171 !important;
+  }
+  .bg-indigo-50, .bg-indigo-50\/30, .bg-indigo-50\/40 {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    color: #818CF8 !important;
+  }
+  .bg-rose-50, .bg-rose-50\/30 {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    color: #FB7185 !important;
+  }
+  .bg-sky-50, .bg-sky-50\/30 {
+    background-color: rgba(14, 165, 233, 0.15) !important;
+    color: #38BDF8 !important;
+  }
+  .bg-cyan-50, .bg-cyan-50\/30 {
+    background-color: rgba(6, 182, 212, 0.15) !important;
+    color: #22D3EE !important;
+  }
+  .bg-amber-50, .bg-amber-50\/30 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #FBBF24 !important;
+  }
+}
+
+/* Print optimizations to support printing active viewport cleanly */
+@media print {
+  body {
+    background: white !important;
+    color: #1A2E26 !important;
+  }
+  header, nav, aside, footer, #export-and-print-toolbar, .no-print, button, form, .btn, .no-print * {
+    display: none !important;
+  }
+  #dynamic-module-viewport {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+}
+
+/* 🌟 Stunning 3D Futuristic Glassmorphism Styling & Ambient Lighting */
+body {
+  background: radial-gradient(circle at 20% 20%, rgba(6, 182, 212, 0.15), transparent 40%),
+              radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15), transparent 40%),
+              #070B14 !important;
+  background-attachment: fixed !important;
+}
+
+.glass-card-3d {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-3d:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 25px 60px rgba(6, 182, 212, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.glass-sidebar-3d {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(7, 11, 20, 0.97) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75), inset 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.light .glass-sidebar-3d {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 245, 235, 0.97) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-left: 1px solid rgba(200, 191, 159, 0.6);
+  box-shadow: -15px 0 45px rgba(0, 0, 0, 0.12);
+}
+
+.neon-glow-cyan {
+  text-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+}
+
+.neon-glow-purple {
+  text-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
+}
+
+@keyframes ambientSweep {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(30px, 40px) scale(1.1); opacity: 0.7; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+}
+
+.ambient-orb-1 {
+  position: fixed;
+  top: 10%;
+  right: 20%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientSweep 12s ease-in-out infinite;
+}
+
+.ambient-orb-2 {
+  position: fixed;
+  bottom: 10%;
+  left: 15%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientSweep 16s ease-in-out infinite reverse;
+}
+

@@ -1,0 +1,10 @@
+{
+  "name": "مزرعه تکثیر و پرورش ماهیان خاویاری فتحی",
+  "description": "سامانه تخصصی مدیریت، ردیابی آمار، برآورد خوراک و ثبت تلفات مزارع پرورش ماهیان خاویاری فتحی با قابلیت تشخیص هوشمند علت تلفات",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
