@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Vazirmatn:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -170,13 +169,6 @@ html:not(.light) {
   .bg-\[\#FAF9F5\],
   .bg-\[\#FAF0E6\],
   .bg-\[\#F5F2E8\],
-  .bg-\[\#FAF9F5\],
-  .bg-\[\#FAF0E6\],
-  .bg-\[\#F5F2E8\],
-  .bg-[#FDFCF8],
-  .bg-[#FAF9F5],
-  .bg-[#FAF0E6],
-  .bg-[#F5F2E8],
   .bg-neutral-50,
   .bg-neutral-100,
   .bg-neutral-200,
@@ -196,10 +188,8 @@ html:not(.light) {
 
   /* Make inner cards with bg-[#FAF9F5] have a deeper background to contrast nicely with the column's bg */
   .bg-\[\#FAF9F5\],
-  .bg-[#FAF9F5],
   .bg-\[\#FAF9F5\]\/50,
-  .bg-[#FAF9F5]/50,
-  .bg-[#FAF9F5]/80,
+  .bg-\[\#FAF9F5\]\/80,
   .bg-white\/80 {
     background-color: var(--natural-bg) !important;
   }
@@ -542,21 +532,24 @@ html:not(.light) {
   }
 }
 
-/* 🌟 Stunning 3D Futuristic Glassmorphism Styling & Ambient Lighting */
-body {
-  background: radial-gradient(circle at 20% 20%, rgba(6, 182, 212, 0.15), transparent 40%),
-              radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15), transparent 40%),
-              #070B14 !important;
+/* 🌟 Premium cyan/violet 3D glass theme derived from the selected visual reference */
+body,
+.erp-neon-screen,
+.erp-neon-theme {
+  background-color: #05091c !important;
+  background-image: linear-gradient(rgba(4, 8, 28, 0.28), rgba(4, 8, 28, 0.46)), url('/assets/erp-glass-neon-bg.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
   background-attachment: fixed !important;
 }
 
 .glass-card-3d {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(145deg, rgba(160, 210, 255, 0.18), rgba(130, 94, 210, 0.10) 55%, rgba(255, 255, 255, 0.045));
+  backdrop-filter: blur(26px) saturate(135%);
+  -webkit-backdrop-filter: blur(26px) saturate(135%);
+  border: 1px solid rgba(180, 224, 255, 0.26);
+  border-top-color: rgba(230, 247, 255, 0.50);
+  box-shadow: 0 24px 62px rgba(0, 0, 20, 0.58), 0 0 28px rgba(34, 211, 238, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(139, 92, 246, 0.16);
   border-radius: 1.5rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -567,11 +560,13 @@ body {
 }
 
 .glass-sidebar-3d {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(7, 11, 20, 0.97) 100%);
+  background: linear-gradient(165deg, rgba(141, 201, 233, 0.19), rgba(25, 31, 72, 0.72) 42%, rgba(67, 39, 104, 0.38));
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75), inset 1px 0 0 rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(195, 230, 255, 0.30);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: -24px 0 70px rgba(0, 2, 20, 0.72), 0 0 34px rgba(34, 211, 238, 0.08), inset 1px 0 0 rgba(255, 255, 255, 0.18);
+  border-radius: 2rem 0 0 2rem;
 }
 
 .light .glass-sidebar-3d {
@@ -622,3 +617,98 @@ body {
   animation: ambientSweep 16s ease-in-out infinite reverse;
 }
 
+/* Whole-application glass surface normalization */
+html:not(.light) .erp-neon-theme .bg-white,
+html:not(.light) .erp-neon-theme .bg-white\/80,
+html:not(.light) .erp-neon-screen .bg-white {
+  background: linear-gradient(145deg, rgba(162, 211, 244, 0.17), rgba(86, 70, 145, 0.10) 58%, rgba(255, 255, 255, 0.035)) !important;
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  border-color: rgba(190, 228, 255, 0.24) !important;
+  box-shadow: 0 18px 48px rgba(0, 2, 24, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+html:not(.light) .erp-neon-theme [class*="rounded-3xl"].border,
+html:not(.light) .erp-neon-theme [class*="rounded-2xl"].border,
+html:not(.light) .erp-neon-screen [class*="rounded-3xl"].border {
+  border-color: rgba(173, 220, 255, 0.23) !important;
+}
+
+html:not(.light) .erp-neon-theme input,
+html:not(.light) .erp-neon-theme select,
+html:not(.light) .erp-neon-theme textarea,
+html:not(.light) .erp-neon-screen input,
+html:not(.light) .erp-neon-screen select,
+html:not(.light) .erp-neon-screen textarea {
+  background: linear-gradient(120deg, rgba(2, 9, 32, 0.64), rgba(62, 52, 112, 0.27)) !important;
+  border: 1px solid rgba(147, 210, 255, 0.28) !important;
+  box-shadow: inset 0 1px 8px rgba(0, 0, 18, 0.42), 0 0 0 1px rgba(122, 240, 255, 0.025) !important;
+}
+
+html:not(.light) .erp-neon-theme input:focus,
+html:not(.light) .erp-neon-theme select:focus,
+html:not(.light) .erp-neon-theme textarea:focus,
+html:not(.light) .erp-neon-screen input:focus {
+  border-color: rgba(72, 236, 255, 0.78) !important;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.14), 0 0 24px rgba(34, 211, 238, 0.12) !important;
+}
+
+.erp-neon-theme button,
+.erp-neon-screen button {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.erp-neon-theme button:hover,
+.erp-neon-screen button:hover {
+  transform: translateY(-1px);
+}
+
+.erp-neon-theme aside nav button {
+  border: 1px solid transparent;
+}
+
+.erp-neon-theme aside nav button:hover {
+  background: linear-gradient(100deg, rgba(34, 211, 238, 0.13), rgba(168, 85, 247, 0.12)) !important;
+  border-color: rgba(125, 226, 255, 0.22);
+  box-shadow: 0 8px 24px rgba(1, 4, 25, 0.32);
+}
+
+.erp-neon-theme aside nav button[class*="text-white"] {
+  background: linear-gradient(110deg, rgba(29, 210, 231, 0.56), rgba(124, 79, 213, 0.68)) !important;
+  border-color: rgba(196, 240, 255, 0.38) !important;
+  box-shadow: 0 10px 30px rgba(25, 211, 232, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+.erp-neon-theme table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.erp-neon-theme thead {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.13));
+}
+
+.erp-neon-theme tbody tr:hover {
+  background: rgba(75, 211, 238, 0.075) !important;
+}
+
+.erp-neon-theme [role="dialog"],
+.erp-neon-theme .fixed.inset-0 > .bg-white {
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+}
+
+.erp-neon-theme svg,
+.erp-neon-screen svg {
+  filter: drop-shadow(0 0 7px rgba(68, 224, 255, 0.18));
+}
+
+@media (max-width: 767px) {
+  .glass-sidebar-3d { border-radius: 1.5rem 0 0 1.5rem; }
+  body, .erp-neon-screen, .erp-neon-theme { background-position: 68% center !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb-1, .ambient-orb-2 { animation: none !important; }
+  .erp-neon-theme *, .erp-neon-screen * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

@@ -27,6 +27,9 @@ import { Pool, Hall } from "../types";
 import { CENTRAL_THRESHOLDS, saveCentralThresholds, DEFAULT_THRESHOLDS } from "../config/thresholds";
 import { SturgeonRepository } from "../storage/repository";
 import { NetworkSyncManager } from "./NetworkSyncManager";
+import { createBackup, restoreBackup } from "../storage/backup";
+import { createTemporaryPassword } from "../core/security";
+import { FARM_SETUP_COMPLETION_KEY } from "../core/farmSetup";
 
 interface SettingsManagerProps {
   pools: Pool[];
@@ -56,10 +59,10 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
   nominalCapacity: "۵۰ تن گوشت و ۵ تن خاویار استحصال سالانه",
   fcrBaseCoefficient: 1.15,
   alertSoundEnabled: true,
-  iotGatewayUrl: "https://api.iot-sturgeon-gateway.local:8080/v1",
+  iotGatewayUrl: "http://fathi-iot.local:8080/v1",
   autoBackupInterval: "daily",
   dailyFeedCeilingKg: 1200,
-  smsAlertNumber: "09113214567",
+  smsAlertNumber: "",
   waterCirculationRate: 92,
   targetWaterTemp: 16.5
 };
@@ -117,24 +120,32 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
     if (window.confirm("آیا از بازنشانی مجدد اطلاعات فارم خاویاری به داده‌های خام مطمئن هستید؟")) {
       localStorage.clear();
       
+      const temporaryAdminPassword = createTemporaryPassword();
       const defaultUsers = [
         {
           id: "admin",
           name: "مدیر سیستم",
           username: "admin",
-          password: "Admin@Sturgeon2026",
+          password: temporaryAdminPassword,
           role: "admin",
           permissions: ["all"]
         }
       ];
       localStorage.setItem("sturgeon_users_v2", JSON.stringify(defaultUsers));
       localStorage.setItem("sturgeon_raw_v4", "true");
+      alert(`رمز موقت مدیر سیستم برای همین نصب محلی: ${temporaryAdminPassword}\nپس از ورود، رمز را از پنل مدیریت تغییر دهید.`);
 
       showToast("تمامی اطلاعات پیش‌فرض حذف شده و سامانه به داده‌های خام اولیه بازنشانی شد.");
       setTimeout(() => {
         window.location.reload();
       }, 1500);
     }
+  };
+
+  const handleReopenFarmSetup = () => {
+    if (!window.confirm("راه‌انداز سالن، استخر و موجودی دوباره باز شود؟ داده‌های فعلی پاک نمی‌شوند و تا تأیید نهایی فقط در پیش‌نویس خواهند بود.")) return;
+    localStorage.removeItem(FARM_SETUP_COMPLETION_KEY);
+    window.location.reload();
   };
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -208,15 +219,9 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
 
   // Export Data Backup as JSON
   const handleExportBackup = () => {
-    const backupData: Record<string, any> = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("sturgeon_")) {
-        backupData[key] = localStorage.getItem(key);
-      }
-    }
-
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const currentUser = SturgeonRepository.getCurrentUser();
+    const backupData = createBackup(currentUser?.username || currentUser?.name || "local-admin");
+    const dataStr = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `sturgeon_caviar_backup_${new Date().toISOString().slice(0,10)}.json`);
@@ -234,17 +239,13 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
       fileReader.onload = (event) => {
         try {
           const parsed = JSON.parse(event.target?.result as string);
-          Object.keys(parsed).forEach((key) => {
-            if (key.startsWith("sturgeon_")) {
-              localStorage.setItem(key, parsed[key]);
-            }
-          });
-          showToast("فایل پشتیبان با موفقیت بازیابی شد. در حال بازنشانی برنامه...");
+          const result = restoreBackup(parsed);
+          showToast(`پشتیبان نسخه ${result.sourceVersion} با ${result.importedKeys} بخش بازیابی شد. برنامه بازنشانی می‌شود.`);
           setTimeout(() => {
             window.location.reload();
           }, 1500);
-        } catch (error) {
-          showToast("خطا در قالب فایل پشتیبان انتخابی.", "error");
+        } catch (error: any) {
+          showToast(error.message || "خطا در قالب فایل پشتیبان انتخابی.", "error");
         }
       };
     }
@@ -490,7 +491,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                     value={general.iotGatewayUrl}
                     onChange={(e) => setGeneral({ ...general, iotGatewayUrl: e.target.value })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
-                    placeholder="https://api.iot-sturgeon-gateway.local:8080/v1"
+                    placeholder="http://fathi-iot.local:8080/v1"
                   />
                 </div>
 
@@ -743,6 +744,26 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
               </div>
             </div>
           </div>
+
+          {isAdmin && (
+            <div className="space-y-4">
+              <div className="border-b border-natural-border/60 pb-3">
+                <h3 className="text-sm font-black text-natural-dark flex items-center gap-2">
+                  <Building2 className="text-natural-forest" size={18} />
+                  راه‌اندازی سالن‌ها، استخرها و موجودی اولیه
+                </h3>
+                <p className="text-[11px] text-natural-text/60 mt-1">راه‌انداز سه‌مرحله‌ای را با اطلاعات فعلی باز می‌کند؛ هیچ داده‌ای تا تأیید نهایی حذف یا جایگزین نمی‌شود.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleReopenFarmSetup}
+                className="w-full md:w-auto px-5 py-3 bg-natural-forest text-white text-xs font-black rounded-xl flex items-center justify-center gap-2"
+              >
+                <Building2 size={15} />
+                بازکردن دوباره راه‌انداز اولیه
+              </button>
+            </div>
+          )}
 
           {/* Section: Calibration and Factory Reset */}
           <div className="space-y-4">

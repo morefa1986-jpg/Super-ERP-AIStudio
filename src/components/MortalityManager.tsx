@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { Pool, MortalityLog } from "../types";
+import { Pool, MortalityLog, SturgeonBreed } from "../types";
 import { 
   FileWarning, 
   PlusCircle, 
@@ -25,11 +25,13 @@ interface MortalityManagerProps {
   onAddMortalityRecord: (
     poolId: string,
     count: number,
+    breed: SturgeonBreed,
+    gender: string,
     symptoms: string,
     explanation: string,
     photoUrl: string,
     aiAction: string
-  ) => void;
+  ) => boolean;
 }
 
 export const MortalityManager: React.FC<MortalityManagerProps> = ({
@@ -42,6 +44,8 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
   // Form State
   const [selectedPoolId, setSelectedPoolId] = useState<string>(activePools[0]?.id || "");
   const [lossCount, setLossCount] = useState<number>(2);
+  const [selectedBreed, setSelectedBreed] = useState<SturgeonBreed>(activePools[0]?.fishBatches?.[0]?.breed || activePools[0]?.breed || SturgeonBreed.BELUGA);
+  const [selectedGender, setSelectedGender] = useState<string>(activePools[0]?.fishBatches?.[0]?.gender || "unknown");
   const [symptoms, setSymptoms] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [photoUrl, setPhotoUrl] = useState<string>(""); // support base64 encoded strings
@@ -75,16 +79,6 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  // Preset disease images simulator
-  const handleApplyPresetImage = (type: string) => {
-    const urls: Record<string, string> = {
-      oxygen: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop",
-      infection: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?q=80&w=600&auto=format&fit=crop",
-      fungus: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=600&auto=format&fit=crop"
-    };
-    setPhotoUrl(urls[type] || "");
   };
 
   // AI Diagnostic triggers
@@ -151,14 +145,21 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
 
     const finalAiAction = aiResult || "پایش بیوشیمیایی، تعدیل تراکم محیط زیستی و حفظ بهداشت مداوم بدنه استخر.";
     
-    onAddMortalityRecord(
+    const saved = onAddMortalityRecord(
       selectedPoolId,
       lossCount,
+      selectedBreed,
+      selectedGender,
       symptoms,
       explanation,
-      photoUrl || "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop", // fallback placeholder
+      photoUrl,
       finalAiAction
     );
+
+    if (!saved) {
+      setErrorMessage("تعداد تلفات از موجودی نژاد و جنسیت انتخاب‌شده بیشتر است؛ ثبت انجام نشد.");
+      return;
+    }
 
     // reset fields
     setLossCount(1);
@@ -219,6 +220,21 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
                   onChange={(e) => setLossCount(parseInt(e.target.value) || 0)}
                   className="w-full font-mono text-xs rounded-xl border border-natural-border p-2.5 bg-[#FDFCF8] focus:border-natural-earth focus:outline-none text-center font-bold text-natural-clay"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-natural-text font-semibold mb-1">نژاد موجودی:</label>
+                <select value={selectedBreed} onChange={e => setSelectedBreed(e.target.value as SturgeonBreed)} className="w-full text-xs rounded-xl border border-natural-border p-2.5 bg-[#FDFCF8]">
+                  {(activePool?.fishBatches?.length ? [...new Set(activePool.fishBatches.map(batch => batch.breed))] : [activePool?.breed || SturgeonBreed.BELUGA]).map(breed => <option key={breed} value={breed}>{breed}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-natural-text font-semibold mb-1">جنسیت:</label>
+                <select value={selectedGender} onChange={e => setSelectedGender(e.target.value)} className="w-full text-xs rounded-xl border border-natural-border p-2.5 bg-[#FDFCF8]">
+                  {(activePool?.fishBatches?.length ? [...new Set(activePool.fishBatches.filter(batch => batch.breed === selectedBreed).map(batch => batch.gender))] : ["unknown"]).map(gender => <option key={gender} value={gender}>{gender === "female" ? "ماده" : gender === "male" ? "نر" : gender === "mixed" ? "ترکیبی" : "نامشخص"}</option>)}
+                </select>
               </div>
             </div>
 
@@ -292,32 +308,7 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-2 pt-2 border-t border-natural-border/20">
-                  <span className="text-[9px] text-natural-text/60 font-sans">تصاویر فرضی:</span>
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleApplyPresetImage("oxygen")}
-                      className="px-2 py-0.5 bg-cyan-100/60 text-cyan-800 border border-cyan-200/50 text-[8px] rounded hover:bg-cyan-200/50 transition-colors cursor-pointer"
-                    >
-                      کم‌اکسیژنی
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyPresetImage("infection")}
-                      className="px-2 py-0.5 bg-rose-100/60 text-rose-800 border border-rose-200/50 text-[8px] rounded hover:bg-rose-200/50 transition-colors cursor-pointer"
-                    >
-                      عفونی
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyPresetImage("fungus")}
-                      className="px-2 py-0.5 bg-amber-100/60 text-amber-800 border border-amber-200/50 text-[8px] rounded hover:bg-amber-200/50 transition-colors cursor-pointer"
-                    >
-                      قارچی
-                    </button>
-                  </div>
-                </div>
+                <div className="mt-2 pt-2 border-t border-natural-border/20 text-[9px] text-natural-text/60">تصویر به‌صورت محلی ذخیره و داخل فایل Backup منتقل می‌شود.</div>
               </div>
             </div>
 

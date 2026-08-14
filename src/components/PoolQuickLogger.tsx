@@ -47,11 +47,13 @@ interface PoolQuickLoggerProps {
   onAddMortalityRecord: (
     poolId: string,
     count: number,
+    breed: SturgeonBreed,
+    gender: string,
     symptoms: string,
     explanation: string,
     photoUrl: string,
     aiAction: string
-  ) => void;
+  ) => boolean;
   setPools: React.Dispatch<React.SetStateAction<Pool[]>>;
   onInitiateTransfer?: (poolId: string) => void;
   onOpenQrCode?: (pool: Pool) => void;
@@ -692,15 +694,22 @@ export default function PoolQuickLogger({
       return;
     }
 
-    // execute casualty subtracting counts
-    onAddMortalityRecord(
+    const targetBatch = [...(activePool.fishBatches || [])].sort((a, b) => b.count - a.count).find(batch => batch.count >= deadCount);
+    const saved = onAddMortalityRecord(
       activePool.id,
       deadCount,
+      targetBatch?.breed || activePool.breed,
+      targetBatch?.gender || "unknown",
       mortalitySymptoms,
       `ثبت دستی آنی: وزن сред: ${deadAvgWeight} گرم. علت: ${mortalityReason}`,
       "", // no photo Url
       `پیشگیری بهداشتی: ضدعفونی سریع آب به کمک پرمنگنات پتاسیم یا کلرینه خفیف، تعدیل دما و بررسی مداوم آمونیاک تانک.`
     );
+
+    if (!saved) {
+      setErrorMsg("تلفات از موجودی یک Stock مشخص بیشتر است؛ از فرم تخصصی تلفات، نژاد و جنسیت را انتخاب کنید.");
+      return;
+    }
 
     setSuccessMsg(`گزارش تلفات ${deadCount} قطعه ماهی با میانگین وزن ${deadAvgWeight} گرم ثبت و جمعیت استخر اصلاح شد.`);
   };

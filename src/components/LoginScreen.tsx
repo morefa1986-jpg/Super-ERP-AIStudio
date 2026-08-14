@@ -54,26 +54,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleQuickAdminLogin = () => {
-    setUsername("admin");
-    setPassword("Admin@Sturgeon2026");
-    setError(null);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#12231B] via-[#1A2E26] to-[#0D1814] text-white flex flex-col justify-center items-center p-4 select-none relative overflow-hidden" dir="rtl">
+    <div className="erp-neon-screen min-h-screen text-white flex flex-col justify-center items-center p-4 select-none relative overflow-hidden" dir="rtl">
       
       {/* Dynamic Background Glowing Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-950/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#D68227]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Glassmorphism Login Card */}
-      <div className="w-full max-w-md bg-[#162920]/90 border border-emerald-900/35 rounded-[32px] p-8 md:p-10 shadow-2xl backdrop-blur-md relative z-10 space-y-8 animate-fadeIn">
+      <div className="glass-card-3d w-full max-w-md rounded-[32px] p-8 md:p-10 relative z-10 space-y-8 animate-fadeIn">
         
         {/* Brand/Identity Segment */}
         <div className="text-center space-y-3">
-          <div className="inline-flex w-16 h-16 rounded-[22px] bg-gradient-to-tr from-[#D68227] to-[#f4b266] items-center justify-center shadow-lg shadow-[#D68227]/20 relative group">
-            <Waves className="text-[#12231B] animate-pulse group-hover:scale-115 transition-transform duration-300" size={32} />
+          <div className="inline-flex w-16 h-16 rounded-[22px] bg-gradient-to-tr from-cyan-400 to-violet-500 items-center justify-center shadow-lg shadow-cyan-400/25 relative group">
+            <Waves className="text-white animate-pulse group-hover:scale-115 transition-transform duration-300" size={32} />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-black font-sans tracking-tight text-white flex items-center justify-center gap-1.5">
@@ -141,7 +135,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             className={`w-full py-4 rounded-2xl text-xs font-black transition-all cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 ${
               loading 
                 ? "bg-emerald-900/40 text-emerald-500 cursor-not-allowed" 
-                : "bg-gradient-to-r from-[#D68227] to-[#D68227]/90 hover:from-[#e48f32] hover:to-[#D68227] text-white active:scale-98"
+                : "bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white active:scale-98"
             }`}
           >
             {loading ? (
@@ -155,21 +149,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {/* Quick Demo Info Block */}
-        <div className="pt-4 border-t border-emerald-900/30 text-center space-y-3">
-          <p className="text-[10px] text-emerald-400/50 leading-relaxed font-medium">
-            حساب کاربری ارشد پیش‌فرض جهت تست اولیه:<br />
-            نام کاربری: <span className="text-[#D68227] font-bold font-mono">admin</span> | رمز عبور: <span className="text-[#D68227] font-bold font-mono">Admin@Sturgeon2026</span>
-          </p>
-
-          <button
-            type="button"
-            onClick={handleQuickAdminLogin}
-            className="text-[10.5px] text-[#D68227] hover:underline hover:text-[#e48f32] font-black cursor-pointer bg-[#D68227]/10 px-3 py-1.5 rounded-xl border border-[#D68227]/20 transition-all"
-          >
-            پرکردن سریع فیلدهای ورود ادمین
-          </button>
-        </div>
+        <div className="pt-4 border-t border-emerald-900/30 text-center text-[10px] text-emerald-400/50">اطلاعات ورود در برنامه یا مستندات نمایش داده نمی‌شود.</div>
 
       </div>
 

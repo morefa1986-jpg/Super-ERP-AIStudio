@@ -6,18 +6,23 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import fs from "fs";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { ServerStore, resolveDataDirectory } from "./server/storage";
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const cliValue = (flag: string) => {
+  const index = process.argv.indexOf(flag);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+};
+const PORT = Number(process.env.PORT || cliValue("--port")) || 3000;
+const HOST = process.env.HOST || cliValue("--host") || "127.0.0.1";
+const STATIC_PREVIEW = process.argv.includes("--strictPort");
 
 app.use(express.json({ limit: "15mb" }));
 
@@ -27,6 +32,10 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: ws:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+  );
   next();
 });
 
@@ -48,7 +57,7 @@ function generateToken(userId: string): string {
 function verifyToken(req: express.Request): UserSession | null {
   const authHeader = req.headers.authorization;
   const tokenFromHeader = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
-  const tokenFromCustom = (req.headers["x-access-token"] as string) || (req.query.token as string);
+  const tokenFromCustom = req.headers["x-access-token"] as string;
   const token = tokenFromHeader || tokenFromCustom;
 
   if (!token) return null;
@@ -61,11 +70,6 @@ function verifyToken(req: express.Request): UserSession | null {
     return null;
   }
   return session;
-}
-
-// Initialize Gemini client lazily/safely (Disabled for independent offline expert mode)
-function getGeminiClient() {
-  return null; // Always return null to force premium offline expert system as requested
 }
 
 // Fallback Rule-Based Sturgeon Diagnostics Engine
@@ -182,62 +186,26 @@ ${clinicalProtocol.map((protocol, idx) => `  ${idx + 1}. ${protocol}`).join("\n"
   return result;
 }
 
-// 🩺 AI Diagnostic Endpoint
-app.post("/api/diagnose", async (req, res) => {
+// 🩺 Permanent local diagnostic endpoint (no cloud or internet dependency)
+app.post("/api/diagnose", (req, res) => {
   try {
-    const { poolName, breed, count, symptoms, detail } = req.body;
+    const { breed, count, symptoms, detail } = req.body;
     
     if (!symptoms) {
       return res.status(400).json({ error: "لطفاً شرح علائم تلفات را وارد نمایید." });
     }
 
-    const client = getGeminiClient();
-
-    if (!client) {
-      // Return high-quality localized rule-based fallback analysis
-      console.log("Using localized fallback system for diagnosis because API Key is absent.");
-      const fallbackSuggestion = getLocalSturgeonDiagnosis(symptoms + " " + detail, count, breed);
-      return res.json({
-        success: true,
-        isAi: false,
-        diagnosis: `[تحلیل هوشمند محلی]
-${fallbackSuggestion}`
-      });
-    }
-
-    const prompt = `
-تو یک متخصص و دامپزشک باسابقه شیلات و پرورش فیل‌ماهی و ماهیان خاویاری (Sturgeon Husbandry & Medicine Expert) هستی.
-پرورش‌دهنده ماهی خاویاری گزارشی از تلفات با مشخصات زیر فرستاده است:
-- نام استخر: ${poolName}
-- گونه ماهی: ${breed}
-- تعداد تلفات اخیر: ${count} قطعه
-- علائم مشاهده‌شده: ${symptoms}
-- توضیحات تکمیلی: ${detail || 'بدون توضیح اضافی'}
-
-لطفاً علائم فوق را ارزیابی علمی نموده و راهکار درمانی فوری، پیشگیرانه و دستورالعمل بهبود شرایط فیزیکی و شیمیایی استخر را در ۴ بخش کلیدی با لحن حرفه‌ای، دلسوزانه و کاملاً تخصصی به زبان فارسی (فارسی روان و فنی شیلات) ارائه کن.
-پاسخ باید ساختاریافته شامل تشخیص احتمالی، اقدامات اضطراری فوری (مانند قطع خوراک، شوک اکسیژن، انتقال قرنطینه)، دوزها یا رویکرد پاکسازی، و نکات پیشگیرانه باشد.
-توضیحاتت کوتاه، کاربردی و مستقیم باشد تا در مانیتور فارم قابل خواندن باشد.
-`;
-
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are an elite aquaculture bio-veterinarian specializing in Sturgeon (Caviar species) health management. Answer clearly and comprehensively in Persian.",
-      }
-    });
-
-    const parsedText = response.text || "تحلیل ناموفق بود. لطفاً شرایط فیزیکوشیمیایی منبع آب را بررسی کنید.";
-
-    res.json({
+    const diagnosis = getLocalSturgeonDiagnosis(`${symptoms} ${detail || ""}`, Number(count) || 0, breed || "نامشخص");
+    return res.json({
       success: true,
-      isAi: true,
-      diagnosis: parsedText
+      isAi: false,
+      engine: "permanent-local-expert",
+      diagnosis: `[تحلیل خبره محلی و آفلاین]\n${diagnosis}`
     });
   } catch (error: any) {
-    console.error("Gemini diagnosis error:", error);
+    console.error("Local diagnosis error:", error);
     res.status(500).json({
-      error: "خطایی در تحلیل علائم رخ داد. سیستم به طور خودکار از تحلیل تجربی استفاده می‌کند.",
+      error: "خطایی در تحلیل محلی علائم رخ داد.",
       diagnosis: getLocalSturgeonDiagnosis(req.body.symptoms || "", req.body.count || 1, req.body.breed || "")
     });
   }
@@ -465,8 +433,8 @@ ${detailsText}
   }
 }
 
-// 🧪 AI / Rule-Based Lab Advisor Endpoint
-app.post("/api/diagnose-lab", async (req, res) => {
+// 🧪 Permanent local laboratory advisor endpoint
+app.post("/api/diagnose-lab", (req, res) => {
   try {
     const { type, data } = req.body;
     
@@ -474,63 +442,17 @@ app.post("/api/diagnose-lab", async (req, res) => {
       return res.status(400).json({ error: "اطلاعات ارسالی برای تحلیل آزمایشگاهی ناقص است." });
     }
 
-    const client = getGeminiClient();
-
-    if (!client) {
-      console.log("Using localized fallback system for lab diagnosis.");
-      const diagnosisText = getLocalLabDiagnosis(type, data);
-      return res.json({
-        success: true,
-        isAi: false,
-        diagnosis: diagnosisText
-      });
+    if (type !== "water" && type !== "ultrasound") {
+      return res.status(400).json({ error: "نوع تحلیل آزمایشگاهی معتبر نیست." });
     }
-
-    let prompt = "";
-    if (type === "water") {
-      prompt = `
-تو یک متخصص ارشد آزمایشگاهی هیدروشیمی شیلاتی مزارع خاویاری با گواهینامه‌های تخصصی زیست‌شناسی دریای خزر هستی.
-یک نمونه آنالیز هیدروشیمی در استخر ${data.poolName} ثبت شده است:
-- دمای آب: ${data.temp} درجه سلسیوس (ایده‌آل ۱۵-۲۲)
-- اکسیژن محلول: ${data.o2} میلی‌گرم در لیتر (ایده‌آل > ۶)
-- اسیدیته (pH): ${data.ph} (ایده‌آل ۷-۸.۲)
-- نیتریت (NO2): ${data.no2} میلی‌گرم در لیتر (بحرانی > ۰.۱)
-- آمونیاک آزاد سمی (NH3): ${data.nh3} میلی‌گرم در لیتر (بحرانی > ۰.۰۱)
-- شوری/سختی: ${data.salinity} ppt
-
-لطفاً این ارقام آزمایشگاهی را با دانش فنی خود تفسیر زیستی کن و توصیه‌نامه کارگاهی کاملاً تخصصی، دستورالعمل ضدعفونی یا درمانی و راهنمای فوری اقدامات اصلاحی فیلترهای زیستی را بنویس. پاسخ دقیق، فنی و ارزشمند به زبان فارسی باشد.
-`;
-    } else {
-      prompt = `
-تو یک متخصص ارشد بیولوژی مولدین، بیوپسی و سونوگرافی ماهیان خاویاری با رتبه الگوهای تاییدیه شیلاتی هستی.
-یک رکورد سونوگرام روی تاس‌ماهی مولد در استخر ${data.poolName} با مشخصات زیر ثبت شده است:
-- کد پلاک میکروچیپ: ${data.tagId}
-- جنسیت مشخص‌شده: ${data.gender}
-- مرحله پختگی تخمدان (Maturity Stage): ${data.stage} (مراحل ۱ الی ۵)
-- قطر متوسط تخمک: ${data.eggDiameter} میلی‌متر
-- شاخص پلاریزاسیون تخمک (GV Index): ${data.gvIndex} (شاخص نزدیک شدن هسته به غشا؛ ایده‌آل برای خاویاردهی زیر ۰.۰۶)
-
-کامل‌ترین تفسیر را درباره دوره زرده‌افزایی، آمادگی بیولوژیکی برای استحصال خاویار درجه یک صادراتی (بلوگا یا آسترا)، توصیه به تغذیه هورمونی یا شوک‌های سرمایی (کاهش دما تانک برای پختگی تخم‌ها) به زبان فارسی تخصصی شیلات ارائه کن.
-`;
-    }
-
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are a head aquaculture lab expert and veterinary consultant for Caspian sturgeon and premium caviar production. Deliver precise, scientifically accurate assessments in Persian.",
-      }
-    });
-
-    const parsedText = response.text || "تحلیل آزمایشگاهی ناموفق بود. مجدداً پارامترها را بررسی کنید.";
-
-    res.json({
+    return res.json({
       success: true,
-      isAi: true,
-      diagnosis: parsedText
+      isAi: false,
+      engine: "permanent-local-expert",
+      diagnosis: getLocalLabDiagnosis(type, data)
     });
   } catch (error: any) {
-    console.error("Gemini lab diagnosis error:", error);
+    console.error("Local lab diagnosis error:", error);
     res.json({
       success: true,
       isAi: false,
@@ -549,16 +471,7 @@ app.post("/api/auth/login", (req, res) => {
     }
 
     const serverDB = readServerDB();
-    const users: any[] = serverDB.sturgeon_users_v2 || [
-      {
-        id: "admin",
-        name: "مدیریت سیستم",
-        username: "admin",
-        password: "$2a$10$wTInB2DmsfXQ3I4Z2n9j8eB4P1z1B7A3l0E3J4K5L6M7N8O9P0Q1R", // Default bcrypt hash placeholder
-        role: "admin",
-        permissions: ["all"]
-      }
-    ];
+    const users: any[] = serverDB.sturgeon_users_v2 || [];
 
     const user = users.find((u) => u.username?.toLowerCase() === username.toLowerCase());
     if (!user) {
@@ -571,7 +484,7 @@ app.post("/api/auth/login", (req, res) => {
       isMatch = bcrypt.compareSync(password, user.password);
     } else {
       // Legacy plaintext password check
-      isMatch = user.password === password || password === "Admin@Sturgeon2026";
+      isMatch = user.password === password;
       if (isMatch) {
         // Upgrade password to bcrypt hash on disk
         user.password = bcrypt.hashSync(password, 10);
@@ -609,31 +522,51 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 // --- DATABASE SYNC SYSTEM FOR LOCAL NETWORK / INTRA-NET DEPLOYMENT ---
-const DB_FILE_PATH = path.join(process.cwd(), "sturgeon_database.json");
+const DATA_DIR = resolveDataDirectory();
+const serverStore = new ServerStore({
+  dataDir: DATA_DIR,
+  legacyJsonPaths: [
+    path.join(DATA_DIR, "sturgeon_database.json"),
+    path.join(process.cwd(), "sturgeon_database.json"),
+  ],
+});
 let onDatabaseUpdated: (() => void) | null = null;
 
-function readServerDB() {
+function readServerDB(): any {
   try {
-    if (fs.existsSync(DB_FILE_PATH)) {
-      const content = fs.readFileSync(DB_FILE_PATH, "utf-8");
-      return JSON.parse(content);
-    }
+    return serverStore.read();
   } catch (err) {
-    console.error("Error reading server sturgeon_database.json:", err);
+    console.error("Error reading server SQLite database:", err);
   }
   return {};
 }
 
 function writeServerDB(data: any) {
   try {
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), "utf-8");
+    serverStore.write(data);
   } catch (err) {
-    console.error("Error writing server sturgeon_database.json:", err);
+    console.error("Error writing server SQLite database:", err);
+    throw err;
   }
 }
 
+app.get("/api/health", (_req, res) => {
+  res.json({ success: true, storage: "sqlite", schemaVersion: 1 });
+});
+
+app.post("/api/db/backup", (req, res) => {
+  const session = verifyToken(req);
+  if (!session || session.role !== "admin") {
+    return res.status(403).json({ success: false, error: "ایجاد پشتیبان سرور فقط برای مدیر مجاز است." });
+  }
+  const backupPath = serverStore.createBackup("manual");
+  return res.json({ success: true, fileName: path.basename(backupPath) });
+});
+
 // GET DB Sync state
 app.get("/api/db/sync", (req, res) => {
+  const session = verifyToken(req);
+  if (!session) return res.status(401).json({ success: false, error: "احراز هویت الزامی است." });
   const db = readServerDB();
   // Strip password hashes from user records when returning public DB state
   const safeDb = { ...db };
@@ -651,12 +584,13 @@ app.get("/api/db/sync", (req, res) => {
 app.post("/api/db/sync", (req, res) => {
   try {
     const session = verifyToken(req);
+    if (!session) return res.status(401).json({ success: false, error: "احراز هویت الزامی است." });
     const clientData = req.body || {};
     const serverDB = readServerDB() || {};
 
     // RBAC Protection: Only admins can alter user list, role permissions, or system settings
     const modifiesUsersOrSettings = clientData.sturgeon_users_v2 || clientData.sturgeon_role_permissions_v3 || clientData.sturgeon_general_settings_v2;
-    if (modifiesUsersOrSettings && session && session.role !== "admin") {
+    if (modifiesUsersOrSettings && session.role !== "admin") {
       return res.status(403).json({ success: false, error: "تغییر اطلاعات مدیریت یا سطح دسترسی‌ها فقط برای مدیر ارشد مجاز است." });
     }
 
@@ -850,33 +784,10 @@ const BOT_CALL_CAPTIONS: Record<string, string[]> = {
 };
 
 async function generateBotResponse(botId: string, userMessage: string, senderName: string): Promise<string> {
-  const client = getGeminiClient();
   const bot = SIMULATED_BOTS.find(b => b.id === botId);
   if (!bot) return "سلام همکار گرامی.";
 
-  if (client) {
-    try {
-      const prompt = `
-تو یک پرسنل با تجربه به نام ${bot.name} با سمت "${bot.roleText}" در یک مزارع بزرگ و پیشرفته پرورش فیل‌ماهی و ماهیان خاویاری در شمال ایران هستی.
-همکار شما به نام ${senderName} این پیام را برای شما فرستاده است:
-"${userMessage}"
-
-لطفاً یک پاسخ کوتاه، کاملاً تخصصی، دوستانه، به زبان فارسی روان بنویس. خود را کاملاً در نقش او غوطه‌ور کن و پاسخ را سریع، عملیاتی و متناسب با نیاز کارگاه بده. پاسخ حداکثر در ۲ یا ۳ جمله باشد بدون پیش‌وند یا پساوند اضافی.
-`;
-      const response = await client.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-          systemInstruction: `You are playing the role of ${bot.name}, who is the ${bot.roleText} at a Caspian Sea caviar farm. Always maintain professional Persian aquaculture dialect.`,
-        }
-      });
-      return response.text?.trim() || "گزارش دریافت شد. در حال بررسی وضعیت هستم.";
-    } catch (e) {
-      console.error("Gemini bot response error:", e);
-    }
-  }
-
-  // Fallback Rule-Based Response
+  // Permanent rule-based local response
   const msg = userMessage.toLowerCase();
   if (botId === "dr_hashemi") {
     if (msg.includes("تلفات") || msg.includes("مرگ") || msg.includes("بیمار") || msg.includes("مریض")) {
@@ -1152,14 +1063,16 @@ async function startServer() {
     });
   });
 
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !STATIC_PREVIEW) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = process.env.FATHI_ERP_DIST_DIR
+      ? path.resolve(process.env.FATHI_ERP_DIST_DIR)
+      : path.join(process.cwd(), "dist");
 
     // Security check: Never serve server bundle, sourcemaps or config files via public static middleware
     app.use((req, res, next) => {
@@ -1182,9 +1095,21 @@ async function startServer() {
     });
   }
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Sturgeon Server] App running with WS support on http://0.0.0.0:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`[Sturgeon Server] App running with WS support on http://${HOST}:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`[Sturgeon Server] Durable data directory: ${DATA_DIR}`);
   });
+
+  const shutdown = () => {
+    wss.close();
+    httpServer.close(() => {
+      serverStore.close();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 5_000).unref();
+  };
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 }
 
 startServer();

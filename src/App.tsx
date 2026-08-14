@@ -59,7 +59,12 @@ import { IoTSensorAlerts } from "./components/IoTSensorAlerts";
 import { GlobalSearchModal } from "./components/GlobalSearchModal";
 import { QrCodeModal } from "./components/QrCodeModal";
 import { OfflineSyncIndicator } from "./components/OfflineSyncIndicator";
+import { InitialStockSetup } from "./components/InitialStockSetup";
 import { SturgeonRepository } from "./storage/repository";
+import { initializePermanentAgents } from "./agents/registry";
+import { applyBatchesToPool, availableStock } from "./core/stock";
+import { FARM_SETUP_COMPLETION_KEY } from "./core/farmSetup";
+import { createTemporaryPassword } from "./core/security";
 import { LogOut } from "lucide-react";
 import { User } from "./types";
 
@@ -211,14 +216,13 @@ const LANG_DICT = {
 };
 
 export default function App() {
+  const [initialStockCompleted, setInitialStockCompleted] = useState(() => Boolean(localStorage.getItem(FARM_SETUP_COMPLETION_KEY)));
+
+  useEffect(() => {
+    initializePermanentAgents();
+  }, []);
   // Theme and Language states
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sturgeon_theme");
-      return (saved as "dark" | "light") || "dark";
-    }
-    return "dark";
-  });
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const [language, setLanguage] = useState<"fa" | "ar" | "en" | "de">(() => {
     if (typeof window !== "undefined") {
@@ -349,6 +353,13 @@ export default function App() {
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [transferFromPoolId, setTransferFromPoolId] = useState<string>("");
 
+  useEffect(() => {
+    if (halls.length && !halls.some(hall => hall.id === selectedHallId)) {
+      setSelectedHallId(halls[0].id);
+      setSelectedPoolId(null);
+    }
+  }, [halls, selectedHallId]);
+
   // Global Search & QR Code modal states
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [qrModalState, setQrModalState] = useState<{
@@ -446,18 +457,20 @@ export default function App() {
         localStorage.clear();
         localStorage.setItem("sturgeon_raw_v4", "true");
         
-        // Seed default admin user so they can login after clear
+        // Seed default admin user with a one-time local password so no credential is published in source.
+        const temporaryAdminPassword = createTemporaryPassword();
         const defaultUsers = [
           {
             id: "admin",
             name: "مدیریت سیستم",
             username: "admin",
-            password: "Admin@Sturgeon2026",
+            password: temporaryAdminPassword,
             role: "admin",
             permissions: ["all"]
           }
         ];
         localStorage.setItem("sturgeon_users_v2", JSON.stringify(defaultUsers));
+        alert(`رمز موقت مدیر سیستم برای همین نصب محلی: ${temporaryAdminPassword}\nپس از ورود، رمز را از پنل مدیریت تغییر دهید.`);
         
         setPools(INITIAL_POOLS);
         setHalls(INITIAL_HALLS);
@@ -957,6 +970,10 @@ export default function App() {
     const transferAvgWeight = avgWeight && avgWeight > 0 ? avgWeight : source.avgWeightGrams;
     const transferGender = gender || "نامشخص / ترکیبی";
 
+    if (amount <= 0 || availableStock(source, transferBreed) < amount) {
+      return false;
+    }
+
     setPools(prevPools => {
       return prevPools.map(pool => {
         // Reduct from primary source pool
@@ -974,18 +991,6 @@ export default function App() {
               }
               return b;
             }).filter(b => b.count > 0);
-
-            // Self-healing check: If we still have remainingToDeduct, deduct from other batches
-            if (remainingToDeduct > 0) {
-              updatedBatches = updatedBatches.map(b => {
-                if (remainingToDeduct > 0) {
-                  const deductFromThis = Math.min(b.count, remainingToDeduct);
-                  remainingToDeduct -= deductFromThis;
-                  return { ...b, count: b.count - deductFromThis };
-                }
-                return b;
-              }).filter(b => b.count > 0);
-            }
 
             // Ensure the sum of batches matches newCount exactly
             const batchSum = updatedBatches.reduce((acc, b) => acc + b.count, 0);
@@ -1187,26 +1192,29 @@ export default function App() {
   const handleAddMortalityRecord = (
     poolId: string,
     count: number,
+    breed: SturgeonBreed,
+    gender: string,
     symptoms: string,
     explanation: string,
     photoUrl: string,
     aiAction: string
-  ) => {
+  ): boolean => {
     const pool = pools.find(p => p.id === poolId);
-    if (!pool) return;
-
-    const actualDiff = Math.min(count, pool.count);
+    if (!pool || count <= 0 || availableStock(pool, breed, gender) < count) return false;
 
     // Reduct count from active pool immediately
     setPools(prevPools => {
       return prevPools.map(p => {
         if (p.id === poolId) {
-          const finalCount = Math.max(0, p.count - actualDiff);
-          return {
-            ...p,
-            count: finalCount,
-            totalBiomassKg: parseFloat(((finalCount * p.avgWeightGrams) / 1000).toFixed(1))
-          };
+          let remaining = count;
+          const sourceBatches = p.fishBatches?.length ? p.fishBatches : [{ id: `legacy-${p.id}`, breed: p.breed, gender: "unknown", count: p.count, avgWeightGrams: p.avgWeightGrams }];
+          const batches = sourceBatches.map(batch => {
+            if (batch.breed !== breed || batch.gender !== gender || remaining === 0) return batch;
+            const deducted = Math.min(batch.count, remaining);
+            remaining -= deducted;
+            return { ...batch, count: batch.count - deducted };
+          });
+          return applyBatchesToPool(p, batches);
         }
         return p;
       });
@@ -1216,10 +1224,12 @@ export default function App() {
       id: `mort-${Date.now().toString().slice(-4)}`,
       poolId,
       poolName: `${pool.name} (سالن ${pool.hallId})`,
-      count: actualDiff,
+      count,
+      breed,
+      gender,
       date: getPersianDate(),
       avgWeightGrams: pool.avgWeightGrams,
-      totalLossKg: parseFloat(((actualDiff * pool.avgWeightGrams) / 1000).toFixed(2)),
+      totalLossKg: parseFloat(((count * pool.avgWeightGrams) / 1000).toFixed(2)),
       reason: symptoms.split(" ")[0] || "نامشخص",
       symptoms,
       photoUrl,
@@ -1228,6 +1238,7 @@ export default function App() {
     };
 
     setMortalityLogs(prev => [newMortalityLog, ...prev]);
+    return true;
   };
 
   // Reset farm to defaults if manager requests refresh
@@ -1235,18 +1246,20 @@ export default function App() {
     if (window.confirm("آیا از بازنشانی مجدد اطلاعات فارم خاویاری به داده‌های خام مطمئن هستید؟")) {
       localStorage.clear();
       
-      // Seed default admin user so they can login after clear
+      // Seed default admin user with a one-time local password so no credential is published in source.
+      const temporaryAdminPassword = createTemporaryPassword();
       const defaultUsers = [
         {
           id: "admin",
           name: "مدیریت سیستم",
           username: "admin",
-          password: "Admin@Sturgeon2026",
+          password: temporaryAdminPassword,
           role: "admin",
           permissions: ["all"]
         }
       ];
       localStorage.setItem("sturgeon_users_v2", JSON.stringify(defaultUsers));
+      alert(`رمز موقت مدیر سیستم برای همین نصب محلی: ${temporaryAdminPassword}\nپس از ورود، رمز را از پنل مدیریت تغییر دهید.`);
       localStorage.setItem("sturgeon_raw_v4", "true");
 
       setHalls(INITIAL_HALLS);
@@ -1267,8 +1280,27 @@ export default function App() {
     return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
 
+  if (!initialStockCompleted) {
+    return (
+      <InitialStockSetup
+        pools={pools}
+        halls={halls}
+        currentUser={currentUser}
+        onComplete={({ pools: initializedPools, halls: initializedHalls }) => {
+          SturgeonRepository.saveHalls(initializedHalls);
+          SturgeonRepository.savePools(initializedPools);
+          setHalls(initializedHalls);
+          setPools(initializedPools);
+          setSelectedHallId(initializedHalls[0]?.id || 1);
+          setSelectedPoolId(null);
+          setInitialStockCompleted(true);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout" dir="rtl">
+    <div className="erp-neon-theme min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout" dir="rtl">
       {/* 🌌 AMBIENT 3D BACKGROUND GLOW ORBS */}
       <div className="ambient-orb-1" />
       <div className="ambient-orb-2" />
@@ -1739,8 +1771,8 @@ export default function App() {
               </strong>
             </div>
             <div className="flex justify-between items-center">
-              <span>نسخه هوش مصنوعی:</span>
-              <span className="text-natural-dark font-mono font-black">v3.5 [Gemini]</span>
+              <span>موتور خبره:</span>
+              <span className="text-natural-dark font-mono font-black">Local v5 — دائم</span>
             </div>
           </div>
         </div>
@@ -1807,7 +1839,7 @@ export default function App() {
                 {activeTab === "stats" && "جدول بیوماس و آمار کلی فارم خاویاری"}
                 {activeTab === "feeding" && "محاسبه علمی جیره غذایی روزانه گله (FCR)"}
                 {activeTab === "transfer" && "دفتر ثبت انتقالات تبارشناسی و ردیابی جابجایی تانک ها"}
-                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی فوق هوشمند با تکنولوژی [Gemini]"}
+                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی با موتور خبره محلی و آفلاین"}
                 {activeTab === "lab" && "آزمایشگاه تخصصی کنترل کیفی هیدروشیمی و سونوگرافی جنسی"}
                 {activeTab === "archive" && "دفتر بایگانی کارگاهی، گزارش‌های آزمایشگاه و کارتابل وقایع"}
                 {activeTab === "facilities" && "سامانه مانیتورینگ تأسیسات زیربنایی و تصفیه‌خانه مرکزی آب"}
@@ -1961,7 +1993,7 @@ export default function App() {
                           }
                         `}
                       >
-                        <span className="text-[10.5px]">سالن {hall.id}</span>
+                        <span className="text-[10.5px] max-w-28 truncate">{hall.name}</span>
                         <span className={`text-[9px] mt-1 px-1.5 rounded-full ${isActive ? "bg-white/20 text-[#FDFCF8]" : "bg-natural-khaki text-natural-text/60"}`}>
                           {hall.isUnderConstruction ? "احداث" : `${poolCount} استخر فعال`}
                         </span>
@@ -1970,12 +2002,18 @@ export default function App() {
                   })}
                 </div>
 
-                <HallMap
-                  hall={halls.find(h => h.id === selectedHallId)!}
-                  pools={pools}
-                  selectedPoolId={selectedPoolId}
-                  onSelectPool={(pId) => setSelectedPoolId(pId)}
-                />
+                {halls.find(h => h.id === selectedHallId) ? (
+                  <HallMap
+                    hall={halls.find(h => h.id === selectedHallId)!}
+                    pools={pools}
+                    selectedPoolId={selectedPoolId}
+                    onSelectPool={(pId) => setSelectedPoolId(pId)}
+                  />
+                ) : (
+                  <div className="bg-white border border-natural-border rounded-3xl p-8 text-center text-sm">
+                    هنوز سالنی برای نمایش ثبت نشده است.
+                  </div>
+                )}
               </div>
             )}
 

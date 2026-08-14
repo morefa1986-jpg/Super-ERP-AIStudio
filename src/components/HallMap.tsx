@@ -63,16 +63,16 @@ export const HallMap: React.FC<HallMapProps> = ({
           >
             <Construction size={48} id="construction-icon" />
           </motion.div>
-          <h4 className="text-xl font-medium text-gray-800 mb-2 font-sans">سالن ۶ (در دست احداث)</h4>
+          <h4 className="text-xl font-medium text-gray-800 mb-2 font-sans">{hall.name} (در دست احداث)</h4>
           <p className="text-gray-500 max-w-md text-sm leading-relaxed">
-            این سالن برای پرورش مرحله نرسری (استخر تخصصی) برنامه‌ریزی شده و هم‌اکنون شاسی‌کشی و بتن‌ریزی استخرها در جریان است. به محض اتمام، ۷۰ استخر نرسری جدید ثبت خواهند شد.
+            {hall.description || "این سالن هنوز وارد مرحله بهره‌برداری نشده است."}
           </p>
         </div>
       );
     }
 
     // 1. Nursery Hall 1 (52 pools, diameter 2m)
-    if (hall.id === 1) {
+    if (hall.id === 1 && hallPools.length === 52 && hallPools.every(pool => pool.diameter === 2)) {
       return (
         <div id="hall1-layout" className="w-full">
           <div className="flex items-center gap-2 mb-4">
@@ -121,7 +121,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 2. Halls 2 & 3: 14 pools of 4m base-fattening
-    if (hall.id === 2 || hall.id === 3) {
+    if ((hall.id === 2 || hall.id === 3) && hallPools.length === 14 && hallPools.every(pool => pool.diameter === 4)) {
       return (
         <div id="halls-2-3-layout" className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4">
           {hallPools.map((pool) => {
@@ -160,7 +160,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 3. Halls 4 & 5: 7 pools of 6m base-fattening
-    if (hall.id === 4 || hall.id === 5) {
+    if ((hall.id === 4 || hall.id === 5) && hallPools.length === 7 && hallPools.every(pool => pool.diameter === 6)) {
       return (
         <div id="halls-4-5-layout" className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-6 justify-center">
           {hallPools.map((pool) => {
@@ -197,7 +197,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 4. Hall 7: Breeding Hall with 2 big pools (176 & 206 sqm) for Breeders
-    if (hall.id === 7) {
+    if (hall.id === 7 && hallPools.length === 2 && hallPools.every(pool => /۱۷۶|۲۰۶|176|206/.test(pool.dimensionsDesc))) {
       return (
         <div id="hall-7-layout" className="grid grid-cols-1 md:grid-cols-2 gap-8 my-4">
           {hallPools.map((pool) => {
@@ -250,7 +250,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 5. Halls 8 & 9: 5 large 10m pools
-    if (hall.id === 8 || hall.id === 9) {
+    if ((hall.id === 8 || hall.id === 9) && hallPools.length === 5 && hallPools.every(pool => pool.diameter === 10)) {
       return (
         <div id="halls-8-9-layout" className="grid grid-cols-2 md:grid-cols-5 gap-6">
           {hallPools.map((pool) => {
@@ -290,7 +290,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 6. Halls 10 & 11: 6 pools d10m + 1 quarantine (d4) + 1 linear divided to 8
-    if (hall.id === 10 || hall.id === 11) {
+    if ((hall.id === 10 || hall.id === 11) && hallPools.some(pool => pool.isCustomCompartment)) {
       const active10mPools = hallPools.filter(p => p.diameter === 10);
       const quarantinePool = hallPools.find(p => p.id.includes("q"));
       const linearPools = hallPools.filter(p => p.isCustomCompartment).sort((a, b) => (a.compartmentIndex ?? 0) - (b.compartmentIndex ?? 0));
@@ -402,7 +402,7 @@ export const HallMap: React.FC<HallMapProps> = ({
     }
 
     // 7. Hall 12: Sales and Landing Room (4 pools, diameter 2.5m, height 1.5m)
-    if (hall.id === 12) {
+    if (hall.id === 12 && hallPools.length === 4 && hallPools.every(pool => pool.diameter === 2.5)) {
       return (
         <div id="hall-12-layout" className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           {hallPools.map((pool) => {
@@ -441,7 +441,46 @@ export const HallMap: React.FC<HallMapProps> = ({
       );
     }
 
-    return null;
+    // Generic layout for user-defined halls and pool structures.
+    return (
+      <div id={`hall-${hall.id}-custom-layout`} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        {hallPools.length ? hallPools.map(pool => {
+          const isSelected = selectedPoolId === pool.id;
+          const shapeClass = pool.shape === "circular"
+            ? "rounded-[2.5rem]"
+            : pool.shape === "linear"
+              ? "rounded-xl aspect-[2/1]"
+              : "rounded-2xl";
+          return (
+            <motion.button
+              key={pool.id}
+              id={`card-${pool.id}`}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onSelectPool(pool.id)}
+              className={`min-h-36 border-2 p-4 text-right transition-all shadow-sm ${shapeClass} ${isSelected ? "bg-natural-forest text-white border-natural-forest-hover ring-4 ring-natural-earth/20" : getStatusColorClass(pool)}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-black text-sm">{pool.name}</div>
+                  <div className="text-[10px] mt-1 opacity-75 font-mono" dir="ltr">{pool.id}</div>
+                </div>
+                <Waves size={21} className="shrink-0 opacity-80" />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
+                <span className="bg-black/5 rounded-lg p-2">{pool.count.toLocaleString("fa-IR")} قطعه</span>
+                <span className="bg-black/5 rounded-lg p-2">{pool.totalBiomassKg.toLocaleString("fa-IR")} kg</span>
+                <span className="col-span-2 bg-black/5 rounded-lg p-2 truncate">{pool.dimensionsDesc}</span>
+              </div>
+            </motion.button>
+          );
+        }) : (
+          <div className="col-span-full border-2 border-dashed border-natural-border rounded-2xl p-10 text-center text-sm text-natural-text/60">
+            هنوز استخری برای این سالن ثبت نشده است.
+          </div>
+        )}
+      </div>
+    );
   };
 
   const activePool = pools.find((p) => p.id === selectedPoolId);

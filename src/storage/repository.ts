@@ -23,6 +23,7 @@ import {
   INITIAL_FEEDINGS, 
   INITIAL_MORTALITY 
 } from "../constants/initialData";
+import { applyBatchesToPool } from "../core/stock";
 
 const STORAGE_KEYS = {
   POOLS: "sturgeon_pools_v2",
@@ -93,7 +94,7 @@ export const SturgeonRepository = {
         id: "admin",
         name: "مدیریت سیستم",
         username: "admin",
-        password: "Admin@Sturgeon2026",
+        password: "",
         role: "admin",
         permissions: ["all"]
       }
@@ -171,7 +172,7 @@ export const SturgeonRepository = {
       // Fallback local check
       const users = this.getUsers();
       const match = users.find(u => u.username?.toLowerCase() === username.toLowerCase());
-      if (match && (match.password === password || password === "Admin@Sturgeon2026")) {
+      if (match && match.password === password) {
         const safeUser = { ...match };
         delete safeUser.password;
         this.setCurrentUser(safeUser);
@@ -183,21 +184,7 @@ export const SturgeonRepository = {
 
   // --- HALLS ---
   getHalls(): Hall[] {
-    const rawHalls = readJson<Hall[]>(STORAGE_KEYS.HALLS, INITIAL_HALLS);
-    return rawHalls.map(h => {
-      if (h.id === 1) {
-        return {
-          ...h,
-          name: "سالن ۱ (نرسری)",
-          description: "شامل ۵۲ ونیرو (استخر قطر ۲ متر) جهت نگهداری لارو و بچه ماهی خاویاری",
-          poolIds: h.poolIds.filter(id => {
-            const num = parseInt(id.replace("h1p", ""));
-            return isNaN(num) || num <= 52;
-          })
-        };
-      }
-      return h;
-    });
+    return readJson<Hall[]>(STORAGE_KEYS.HALLS, INITIAL_HALLS);
   },
 
   saveHalls(halls: Hall[]): void {
@@ -208,22 +195,12 @@ export const SturgeonRepository = {
   // --- POOLS (WITH AUTOMATIC BIOMASS CALCULATIONS) ---
   getPools(): Pool[] {
     const rawPools = readJson<Pool[]>(STORAGE_KEYS.POOLS, INITIAL_POOLS);
-    // Filter out pools h1p53..h1p70 if present
-    const filteredPools = rawPools.filter(p => {
-      if (p.hallId === 1) {
-        const num = parseInt(p.id.replace("h1p", ""));
-        return isNaN(num) || num <= 52;
-      }
-      return true;
-    });
-
-    // Guarantee correct calculated totalBiomassKg = count * avgWeightGrams / 1000
-    return filteredPools.map(p => {
-      const name = p.hallId === 1 ? p.name.replace("استخر", "ونیرو") : p.name;
+    // Fish batches are the single source of truth whenever they exist.
+    return rawPools.map(p => {
+      if (p.fishBatches?.length) return applyBatchesToPool(p, p.fishBatches);
       const actualBiomass = parseFloat(((p.count * p.avgWeightGrams) / 1000).toFixed(1));
       return {
         ...p,
-        name,
         totalBiomassKg: actualBiomass
       };
     });
@@ -231,6 +208,7 @@ export const SturgeonRepository = {
 
   savePools(pools: Pool[]): void {
     const processedPools = pools.map(p => {
+      if (p.fishBatches?.length) return applyBatchesToPool(p, p.fishBatches);
       const actualBiomass = parseFloat(((p.count * p.avgWeightGrams) / 1000).toFixed(1));
       return { ...p, totalBiomassKg: actualBiomass };
     });

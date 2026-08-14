@@ -64,7 +64,7 @@ export const SidebarDashboard: React.FC<SidebarDashboardProps> = ({
   pools,
   halls,
   mortalityCount,
-  userEmail = "morefa1986@gmail.com"
+  userEmail = "local-user"
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

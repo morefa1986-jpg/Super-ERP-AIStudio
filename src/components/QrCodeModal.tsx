@@ -57,7 +57,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
         serial: citesBatch.tinSerial
       });
     } else {
-      payloadString = "https://fathi-sturgeon-farm.ir/verify";
+      payloadString = JSON.stringify({ farm: "FATHI AQUA STURGEON FARM", type: "OFFLINE_LOCAL_ID", version: 1 });
     }
 
     QRCode.toDataURL(payloadString, {
