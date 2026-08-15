@@ -669,7 +669,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   });
 
   return (
-    <div className="bg-white border border-natural-border rounded-3xl p-6 shadow-sm space-y-6 animate-fadeIn text-right" dir="rtl" id="admin-management-panel">
+    <div className="bg-white border border-natural-border rounded-3xl p-6 shadow-sm space-y-6 animate-fadeIn text-start" id="admin-management-panel">
       
       {/* Toast Notification Widget */}
       {toast && (
@@ -1684,15 +1684,15 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                             <span className="text-natural-text/60 font-sans text-[9px]">نام کاربری ورود:</span>
                             <strong className="text-natural-dark font-bold">{user.username || "نامشخص"}</strong>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <div className="flex gap-1.5 items-center">
-                              <span className="text-natural-text/60 font-sans text-[9px]">رمز ورود:</span>
-                              <strong className="text-natural-dark font-bold">{user.password || "••••"}</strong>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setEditingPasswordUserId(user.id);
-                                setTempPassword(user.password || "");
+                              <div className="flex justify-between items-center">
+                                <div className="flex gap-1.5 items-center">
+                                  <span className="text-natural-text/60 font-sans text-[9px]">رمز ورود:</span>
+                                  <strong className="text-natural-dark font-bold">ذخیره‌شده و مخفی</strong>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setEditingPasswordUserId(user.id);
+                                    setTempPassword("");
                               }}
                               className="text-[#D68227] hover:underline font-bold text-[9.5px] font-sans cursor-pointer"
                             >

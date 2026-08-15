@@ -63,10 +63,9 @@ import { InitialStockSetup } from "./components/InitialStockSetup";
 import { SturgeonRepository } from "./storage/repository";
 import { initializePermanentAgents } from "./agents/registry";
 import { applyBatchesToPool, availableStock } from "./core/stock";
-import { FARM_SETUP_COMPLETION_KEY } from "./core/farmSetup";
-import { createTemporaryPassword } from "./core/security";
 import { LogOut } from "lucide-react";
 import { User } from "./types";
+import bcrypt from "bcryptjs";
 
 // 🚀 Code Splitting & Lazy Loaded Heavy Modules for High Performance & Faster Initial Bundle
 const HallMap = lazy(() => import("./components/HallMap").then(m => ({ default: m.HallMap })));
@@ -212,22 +211,33 @@ const LANG_DICT = {
     dark: "Dunkel",
     light: "Hell",
     lang: "Sprache"
+  },
+  ru: {
+    farmName: "Осетровая ферма Фатхи", subtitle: "ERP-система осетрового хозяйства", observer: "Ответственный оператор:", logout: "Выйти", syncStatus: "Локальная синхронизация", synced: "Синхронизировано", offline: "Офлайн", map: "Карта бассейнов", stats: "Биомасса", feeding: "Рацион кормления", transfer: "Перемещения", mortality: "Падёж", lab: "Биометрическая лаборатория", archive: "Архив событий", facilities: "Инженерные системы", processing: "Переработка икры", feedmill: "Кормовой цех", inventory: "Центральный склад", accounting: "Финансы", security: "Безопасность", coldstorage: "Холодильник", traceability: "Прослеживаемость", admin: "Администрирование", settings: "Настройки", chat: "Связь", themeMode: "Тема", dark: "Тёмная", light: "Светлая", lang: "Язык"
   }
 };
 
 export default function App() {
-  const [initialStockCompleted, setInitialStockCompleted] = useState(() => Boolean(localStorage.getItem(FARM_SETUP_COMPLETION_KEY)));
+  const [initialStockCompleted, setInitialStockCompleted] = useState(() => Boolean(localStorage.getItem("sturgeon_initial_stock_completed_v1")));
 
   useEffect(() => {
     initializePermanentAgents();
   }, []);
   // Theme and Language states
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sturgeon_theme");
+      return (saved as "dark" | "light") || "dark";
+    }
+    return "dark";
+  });
 
-  const [language, setLanguage] = useState<"fa" | "ar" | "en" | "de">(() => {
+  const [language, setLanguage] = useState<"fa" | "ar" | "en" | "de" | "ru">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sturgeon_lang");
-      return (saved as "fa" | "ar" | "en" | "de") || "fa";
+      if (saved && ["fa", "ar", "en", "de", "ru"].includes(saved)) return saved as "fa" | "ar" | "en" | "de" | "ru";
+      const detected = (navigator.languages?.[0] || navigator.language || "fa").slice(0, 2);
+      return (["fa", "ar", "en", "de", "ru"].includes(detected) ? detected : "fa") as "fa" | "ar" | "en" | "de" | "ru";
     }
     return "fa";
   });
@@ -245,7 +255,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("sturgeon_lang", language);
     const root = document.documentElement;
-    if (["en", "de"].includes(language)) {
+    if (["en", "de", "ru"].includes(language)) {
       root.setAttribute("dir", "ltr");
       root.classList.add(`lang-${language}`);
       root.classList.remove("lang-fa", "lang-ar");
@@ -353,13 +363,6 @@ export default function App() {
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [transferFromPoolId, setTransferFromPoolId] = useState<string>("");
 
-  useEffect(() => {
-    if (halls.length && !halls.some(hall => hall.id === selectedHallId)) {
-      setSelectedHallId(halls[0].id);
-      setSelectedPoolId(null);
-    }
-  }, [halls, selectedHallId]);
-
   // Global Search & QR Code modal states
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [qrModalState, setQrModalState] = useState<{
@@ -458,13 +461,13 @@ export default function App() {
         localStorage.setItem("sturgeon_raw_v4", "true");
         
         // Seed default admin user with a one-time local password so no credential is published in source.
-        const temporaryAdminPassword = createTemporaryPassword();
+        const temporaryAdminPassword = crypto.randomUUID().slice(0, 12);
         const defaultUsers = [
           {
             id: "admin",
             name: "مدیریت سیستم",
             username: "admin",
-            password: temporaryAdminPassword,
+            password: bcrypt.hashSync(temporaryAdminPassword, 10),
             role: "admin",
             permissions: ["all"]
           }
@@ -1247,13 +1250,13 @@ export default function App() {
       localStorage.clear();
       
       // Seed default admin user with a one-time local password so no credential is published in source.
-      const temporaryAdminPassword = createTemporaryPassword();
+      const temporaryAdminPassword = crypto.randomUUID().slice(0, 12);
       const defaultUsers = [
         {
           id: "admin",
           name: "مدیریت سیستم",
           username: "admin",
-          password: temporaryAdminPassword,
+        password: bcrypt.hashSync(temporaryAdminPassword, 10),
           role: "admin",
           permissions: ["all"]
         }
@@ -1277,7 +1280,7 @@ export default function App() {
   const totalDeadCount = mortalityLogs.reduce((acc, curr) => acc + curr.count, 0);
 
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} />;
+    return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} onLanguageChange={(next) => setLanguage(next)} />;
   }
 
   if (!initialStockCompleted) {
@@ -1286,13 +1289,9 @@ export default function App() {
         pools={pools}
         halls={halls}
         currentUser={currentUser}
-        onComplete={({ pools: initializedPools, halls: initializedHalls }) => {
-          SturgeonRepository.saveHalls(initializedHalls);
+        onComplete={(initializedPools) => {
           SturgeonRepository.savePools(initializedPools);
-          setHalls(initializedHalls);
           setPools(initializedPools);
-          setSelectedHallId(initializedHalls[0]?.id || 1);
-          setSelectedPoolId(null);
           setInitialStockCompleted(true);
         }}
       />
@@ -1300,7 +1299,7 @@ export default function App() {
   }
 
   return (
-    <div className="erp-neon-theme min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout" dir="rtl">
+    <div className="min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout">
       {/* 🌌 AMBIENT 3D BACKGROUND GLOW ORBS */}
       <div className="ambient-orb-1" />
       <div className="ambient-orb-2" />
@@ -1409,6 +1408,7 @@ export default function App() {
                 <option value="ar" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">العربية</option>
                 <option value="en" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">English</option>
                 <option value="de" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">Deutsch</option>
+                <option value="ru" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">Русский</option>
               </select>
             </div>
           </div>
@@ -1771,8 +1771,8 @@ export default function App() {
               </strong>
             </div>
             <div className="flex justify-between items-center">
-              <span>موتور خبره:</span>
-              <span className="text-natural-dark font-mono font-black">Local v5 — دائم</span>
+              <span>نسخه هوش مصنوعی:</span>
+              <span className="text-natural-dark font-mono font-black">v3.5 [Gemini]</span>
             </div>
           </div>
         </div>
@@ -1839,7 +1839,7 @@ export default function App() {
                 {activeTab === "stats" && "جدول بیوماس و آمار کلی فارم خاویاری"}
                 {activeTab === "feeding" && "محاسبه علمی جیره غذایی روزانه گله (FCR)"}
                 {activeTab === "transfer" && "دفتر ثبت انتقالات تبارشناسی و ردیابی جابجایی تانک ها"}
-                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی با موتور خبره محلی و آفلاین"}
+                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی فوق هوشمند با تکنولوژی [Gemini]"}
                 {activeTab === "lab" && "آزمایشگاه تخصصی کنترل کیفی هیدروشیمی و سونوگرافی جنسی"}
                 {activeTab === "archive" && "دفتر بایگانی کارگاهی، گزارش‌های آزمایشگاه و کارتابل وقایع"}
                 {activeTab === "facilities" && "سامانه مانیتورینگ تأسیسات زیربنایی و تصفیه‌خانه مرکزی آب"}
@@ -1993,7 +1993,7 @@ export default function App() {
                           }
                         `}
                       >
-                        <span className="text-[10.5px] max-w-28 truncate">{hall.name}</span>
+                        <span className="text-[10.5px]">سالن {hall.id}</span>
                         <span className={`text-[9px] mt-1 px-1.5 rounded-full ${isActive ? "bg-white/20 text-[#FDFCF8]" : "bg-natural-khaki text-natural-text/60"}`}>
                           {hall.isUnderConstruction ? "احداث" : `${poolCount} استخر فعال`}
                         </span>
@@ -2002,18 +2002,12 @@ export default function App() {
                   })}
                 </div>
 
-                {halls.find(h => h.id === selectedHallId) ? (
-                  <HallMap
-                    hall={halls.find(h => h.id === selectedHallId)!}
-                    pools={pools}
-                    selectedPoolId={selectedPoolId}
-                    onSelectPool={(pId) => setSelectedPoolId(pId)}
-                  />
-                ) : (
-                  <div className="bg-white border border-natural-border rounded-3xl p-8 text-center text-sm">
-                    هنوز سالنی برای نمایش ثبت نشده است.
-                  </div>
-                )}
+                <HallMap
+                  hall={halls.find(h => h.id === selectedHallId)!}
+                  pools={pools}
+                  selectedPoolId={selectedPoolId}
+                  onSelectPool={(pId) => setSelectedPoolId(pId)}
+                />
               </div>
             )}
 

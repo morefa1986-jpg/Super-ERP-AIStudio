@@ -24,6 +24,8 @@ import {
   INITIAL_MORTALITY 
 } from "../constants/initialData";
 import { applyBatchesToPool } from "../core/stock";
+import bcrypt from "bcryptjs";
+import { getApiUrl } from "../network/connection";
 
 const STORAGE_KEYS = {
   POOLS: "sturgeon_pools_v2",
@@ -129,7 +131,14 @@ export const SturgeonRepository = {
   },
 
   saveUsers(users: User[]): void {
-    writeJson(STORAGE_KEYS.USERS, users);
+    const safeUsers = users.map(user => {
+      const copy = { ...user };
+      if (copy.password && !/^\$2[aby]\$/.test(copy.password)) {
+        copy.password = bcrypt.hashSync(copy.password, 10);
+      }
+      return copy;
+    });
+    writeJson(STORAGE_KEYS.USERS, safeUsers);
     this.recordOfflineChange("SAVE_USERS", `بروزرسانی فهرست کاربران (${users.length} کاربر)`);
   },
 
@@ -153,7 +162,7 @@ export const SturgeonRepository = {
 
   async loginWithServer(username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
@@ -172,7 +181,14 @@ export const SturgeonRepository = {
       // Fallback local check
       const users = this.getUsers();
       const match = users.find(u => u.username?.toLowerCase() === username.toLowerCase());
-      if (match && match.password === password) {
+      const validLocalPassword = match?.password
+        ? (/^\$2[aby]\$/.test(match.password) ? bcrypt.compareSync(password, match.password) : match.password === password)
+        : false;
+      if (match && validLocalPassword) {
+        if (match.password && !/^\$2[aby]\$/.test(match.password)) {
+          match.password = bcrypt.hashSync(password, 10);
+          this.saveUsers(users);
+        }
         const safeUser = { ...match };
         delete safeUser.password;
         this.setCurrentUser(safeUser);
@@ -184,7 +200,21 @@ export const SturgeonRepository = {
 
   // --- HALLS ---
   getHalls(): Hall[] {
-    return readJson<Hall[]>(STORAGE_KEYS.HALLS, INITIAL_HALLS);
+    const rawHalls = readJson<Hall[]>(STORAGE_KEYS.HALLS, INITIAL_HALLS);
+    return rawHalls.map(h => {
+      if (h.id === 1) {
+        return {
+          ...h,
+          name: "سالن ۱ (نرسری)",
+          description: "شامل ۵۲ ونیرو (استخر قطر ۲ متر) جهت نگهداری لارو و بچه ماهی خاویاری",
+          poolIds: h.poolIds.filter(id => {
+            const num = parseInt(id.replace("h1p", ""));
+            return isNaN(num) || num <= 52;
+          })
+        };
+      }
+      return h;
+    });
   },
 
   saveHalls(halls: Hall[]): void {
@@ -195,12 +225,23 @@ export const SturgeonRepository = {
   // --- POOLS (WITH AUTOMATIC BIOMASS CALCULATIONS) ---
   getPools(): Pool[] {
     const rawPools = readJson<Pool[]>(STORAGE_KEYS.POOLS, INITIAL_POOLS);
+    // Filter out pools h1p53..h1p70 if present
+    const filteredPools = rawPools.filter(p => {
+      if (p.hallId === 1) {
+        const num = parseInt(p.id.replace("h1p", ""));
+        return isNaN(num) || num <= 52;
+      }
+      return true;
+    });
+
     // Fish batches are the single source of truth whenever they exist.
-    return rawPools.map(p => {
-      if (p.fishBatches?.length) return applyBatchesToPool(p, p.fishBatches);
+    return filteredPools.map(p => {
+      const name = p.hallId === 1 ? p.name.replace("استخر", "ونیرو") : p.name;
+      if (p.fishBatches?.length) return { ...applyBatchesToPool(p, p.fishBatches), name };
       const actualBiomass = parseFloat(((p.count * p.avgWeightGrams) / 1000).toFixed(1));
       return {
         ...p,
+        name,
         totalBiomassKg: actualBiomass
       };
     });
@@ -348,7 +389,7 @@ export const SturgeonRepository = {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch("/api/db/sync", {
+      const response = await fetch(getApiUrl("/api/db/sync"), {
         method: "POST",
         headers,
         body: JSON.stringify(clientPayload)

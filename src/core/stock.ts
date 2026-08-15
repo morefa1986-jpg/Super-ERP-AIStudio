@@ -15,8 +15,10 @@ export function validateBatches(batches: FishBatch[], allPools: Pool[], currentP
 
   batches.forEach((batch, index) => {
     if (!Object.values(SturgeonBreed).includes(batch.breed)) errors.push(`ردیف ${index + 1}: نژاد نامعتبر است.`);
+    if (!["female", "male", "unknown", "mixed"].includes(batch.gender)) errors.push(`ردیف ${index + 1}: جنسیت نامعتبر است.`);
     if (!Number.isInteger(batch.count) || batch.count < 0) errors.push(`ردیف ${index + 1}: تعداد باید عدد صحیح و غیرمنفی باشد.`);
     if (!Number.isFinite(batch.avgWeightGrams) || batch.avgWeightGrams < 0) errors.push(`ردیف ${index + 1}: وزن متوسط نامعتبر است.`);
+    if (batch.count > 0 && batch.avgWeightGrams <= 0) errors.push(`ردیف ${index + 1}: برای گروه دارای ماهی، وزن متوسط باید بیشتر از صفر باشد.`);
     const rowChips = (batch.chipIds || []).map(normalizeChip).filter(Boolean);
     if (rowChips.length > batch.count) errors.push(`ردیف ${index + 1}: تعداد چیپ‌ها بیشتر از تعداد ماهی است.`);
     rowChips.forEach(chip => {

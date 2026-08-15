@@ -12,8 +12,6 @@ export default defineConfig(() => {
       },
     },
     server: {
-      host: '0.0.0.0',
-      allowedHosts: ['terminal.local'],
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
@@ -23,14 +21,19 @@ export default defineConfig(() => {
       },
     },
     build: {
+      chunkSizeWarningLimit: 650,
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (!id.includes('node_modules')) return undefined;
-            if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            if (id.includes('motion')) return 'vendor-motion';
-            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('node_modules')) {
+              if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+              if (id.includes('lucide-react')) return 'vendor-icons';
+              if (id.includes('motion')) return 'vendor-motion';
+              return 'vendor-core';
+            }
+            if (id.includes('/src/components/PoolQuickLogger')) return 'pool-logger';
+            if (id.includes('/src/components/SidebarDashboard')) return 'sidebar';
+            if (id.includes('/src/components/DashboardStats')) return 'dashboard-stats';
             return undefined;
           },
         },

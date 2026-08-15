@@ -20,5 +20,7 @@ assert.equal(updated.avgWeightGrams, 667);
 assert.equal(availableStock(updated, SturgeonBreed.BELUGA, "female"), 10);
 assert.equal(validateBatches(batches, [pool], pool.id).length, 0);
 assert.ok(validateBatches([{ ...batches[0], count: 0 }], [pool], pool.id).some(error => error.includes("چیپ")));
+assert.ok(validateBatches([{ ...batches[0], avgWeightGrams: 0 }], [pool], pool.id).some(error => error.includes("وزن متوسط")));
+assert.ok(validateBatches([{ ...batches[0], gender: "invalid" }], [pool], pool.id).some(error => error.includes("جنسیت")));
 
 console.log("core-stock tests passed");
