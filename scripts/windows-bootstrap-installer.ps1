@@ -18,8 +18,11 @@ $labels = @{
 $l = $labels[$lang]
 Write-Host "== $($l.title) ==" -ForegroundColor Cyan
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Node.js 18 or newer is required. Install Node.js and run this installer again.' }
-if (-not $InstallPath) { $InstallPath = Join-Path $env:LOCALAPPDATA 'FathiAquaSuperERP' }
-$InstallPath = Read-Host "$($l.choose) [$InstallPath]"; if (-not $InstallPath) { $InstallPath = Join-Path $env:LOCALAPPDATA 'FathiAquaSuperERP' }
+if (-not $InstallPath) {
+  $defaultInstallPath = Join-Path $env:LOCALAPPDATA 'FathiAquaSuperERP'
+  $InstallPath = Read-Host "$($l.choose) [$defaultInstallPath]"
+  if (-not $InstallPath) { $InstallPath = $defaultInstallPath }
+}
 if (-not $Package) { $Package = Join-Path $PSScriptRoot 'FathiAquaSuperERP-package.zip' }
 if (-not (Test-Path -LiteralPath $Package)) { throw "Package not found: $Package" }
 New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null
