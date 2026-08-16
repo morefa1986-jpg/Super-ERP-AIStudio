@@ -9,22 +9,27 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import fs from "fs";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { ServerStore, resolveDataDirectory } from "./server/storage";
 
 dotenv.config();
 
 const app = express();
-const cliValue = (flag: string) => {
-  const index = process.argv.indexOf(flag);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-};
-const PORT = Number(process.env.PORT || cliValue("--port")) || 3000;
-const HOST = process.env.HOST || cliValue("--host") || "127.0.0.1";
-const STATIC_PREVIEW = process.argv.includes("--strictPort");
+// Allow the host environment (installer, LAN deployment, or CI smoke tests)
+// to select a port while keeping the local development default stable.
+const parsedPort = Number.parseInt(process.env.PORT || "3000", 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 
 app.use(express.json({ limit: "15mb" }));
+
+// Lightweight readiness endpoint used by the connection settings screen and
+// installer smoke checks. Keep it before the SPA fallback so `/api/health`
+// cannot be mistaken for a successful HTML response.
+app.get("/api/health", (_req, res) => {
+  res.json({ success: true, status: "ok", service: "fathi-aqua-super-erp" });
+});
 
 // Security Headers Middleware
 app.use((req, res, next) => {
@@ -32,10 +37,6 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: ws:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
-  );
   next();
 });
 
@@ -47,6 +48,37 @@ interface UserSession {
   createdAt: number;
 }
 const activeSessions = new Map<string, UserSession>();
+const loginAttempts = new Map<string, { failures: number; windowStartedAt: number; blockedUntil: number }>();
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-login-password", 10);
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_BLOCK_MS = 15 * 60 * 1000;
+
+function loginKey(req: express.Request, username: string): string {
+  return `${req.ip || "unknown"}:${username.trim().toLowerCase()}`;
+}
+
+function isLoginBlocked(key: string): boolean {
+  const record = loginAttempts.get(key);
+  if (!record) return false;
+  const now = Date.now();
+  if (record.blockedUntil > now) return true;
+  if (now - record.windowStartedAt > LOGIN_WINDOW_MS) loginAttempts.delete(key);
+  return false;
+}
+
+function recordLoginFailure(key: string): void {
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  const record = !current || now - current.windowStartedAt > LOGIN_WINDOW_MS
+    ? { failures: 0, windowStartedAt: now, blockedUntil: 0 }
+    : current;
+  record.failures += 1;
+  if (record.failures >= LOGIN_MAX_FAILURES) record.blockedUntil = now + LOGIN_BLOCK_MS;
+  loginAttempts.set(key, record);
+}
+
+function clearLoginFailures(key: string): void { loginAttempts.delete(key); }
 
 // Auth Helper Functions
 function generateToken(userId: string): string {
@@ -70,6 +102,11 @@ function verifyToken(req: express.Request): UserSession | null {
     return null;
   }
   return session;
+}
+
+// Initialize Gemini client lazily/safely (Disabled for independent offline expert mode)
+function getGeminiClient() {
+  return null; // Always return null to force premium offline expert system as requested
 }
 
 // Fallback Rule-Based Sturgeon Diagnostics Engine
@@ -186,26 +223,63 @@ ${clinicalProtocol.map((protocol, idx) => `  ${idx + 1}. ${protocol}`).join("\n"
   return result;
 }
 
-// 🩺 Permanent local diagnostic endpoint (no cloud or internet dependency)
-app.post("/api/diagnose", (req, res) => {
+// 🩺 AI Diagnostic Endpoint
+app.post("/api/diagnose", async (req, res) => {
+  if (!verifyToken(req)) return res.status(401).json({ success: false, error: "احراز هویت الزامی است." });
   try {
-    const { breed, count, symptoms, detail } = req.body;
+    const { poolName, breed, count, symptoms, detail } = req.body;
     
     if (!symptoms) {
       return res.status(400).json({ error: "لطفاً شرح علائم تلفات را وارد نمایید." });
     }
 
-    const diagnosis = getLocalSturgeonDiagnosis(`${symptoms} ${detail || ""}`, Number(count) || 0, breed || "نامشخص");
-    return res.json({
+    const client = getGeminiClient();
+
+    if (!client) {
+      // Return high-quality localized rule-based fallback analysis
+      console.log("Using localized fallback system for diagnosis because API Key is absent.");
+      const fallbackSuggestion = getLocalSturgeonDiagnosis(symptoms + " " + detail, count, breed);
+      return res.json({
+        success: true,
+        isAi: false,
+        diagnosis: `[تحلیل هوشمند محلی]
+${fallbackSuggestion}`
+      });
+    }
+
+    const prompt = `
+تو یک متخصص و دامپزشک باسابقه شیلات و پرورش فیل‌ماهی و ماهیان خاویاری (Sturgeon Husbandry & Medicine Expert) هستی.
+پرورش‌دهنده ماهی خاویاری گزارشی از تلفات با مشخصات زیر فرستاده است:
+- نام استخر: ${poolName}
+- گونه ماهی: ${breed}
+- تعداد تلفات اخیر: ${count} قطعه
+- علائم مشاهده‌شده: ${symptoms}
+- توضیحات تکمیلی: ${detail || 'بدون توضیح اضافی'}
+
+لطفاً علائم فوق را ارزیابی علمی نموده و راهکار درمانی فوری، پیشگیرانه و دستورالعمل بهبود شرایط فیزیکی و شیمیایی استخر را در ۴ بخش کلیدی با لحن حرفه‌ای، دلسوزانه و کاملاً تخصصی به زبان فارسی (فارسی روان و فنی شیلات) ارائه کن.
+پاسخ باید ساختاریافته شامل تشخیص احتمالی، اقدامات اضطراری فوری (مانند قطع خوراک، شوک اکسیژن، انتقال قرنطینه)، دوزها یا رویکرد پاکسازی، و نکات پیشگیرانه باشد.
+توضیحاتت کوتاه، کاربردی و مستقیم باشد تا در مانیتور فارم قابل خواندن باشد.
+`;
+
+    const response = await client.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are an elite aquaculture bio-veterinarian specializing in Sturgeon (Caviar species) health management. Answer clearly and comprehensively in Persian.",
+      }
+    });
+
+    const parsedText = response.text || "تحلیل ناموفق بود. لطفاً شرایط فیزیکوشیمیایی منبع آب را بررسی کنید.";
+
+    res.json({
       success: true,
-      isAi: false,
-      engine: "permanent-local-expert",
-      diagnosis: `[تحلیل خبره محلی و آفلاین]\n${diagnosis}`
+      isAi: true,
+      diagnosis: parsedText
     });
   } catch (error: any) {
-    console.error("Local diagnosis error:", error);
+    console.error("Gemini diagnosis error:", error);
     res.status(500).json({
-      error: "خطایی در تحلیل محلی علائم رخ داد.",
+      error: "خطایی در تحلیل علائم رخ داد. سیستم به طور خودکار از تحلیل تجربی استفاده می‌کند.",
       diagnosis: getLocalSturgeonDiagnosis(req.body.symptoms || "", req.body.count || 1, req.body.breed || "")
     });
   }
@@ -433,8 +507,9 @@ ${detailsText}
   }
 }
 
-// 🧪 Permanent local laboratory advisor endpoint
-app.post("/api/diagnose-lab", (req, res) => {
+// 🧪 AI / Rule-Based Lab Advisor Endpoint
+app.post("/api/diagnose-lab", async (req, res) => {
+  if (!verifyToken(req)) return res.status(401).json({ success: false, error: "احراز هویت الزامی است." });
   try {
     const { type, data } = req.body;
     
@@ -442,17 +517,63 @@ app.post("/api/diagnose-lab", (req, res) => {
       return res.status(400).json({ error: "اطلاعات ارسالی برای تحلیل آزمایشگاهی ناقص است." });
     }
 
-    if (type !== "water" && type !== "ultrasound") {
-      return res.status(400).json({ error: "نوع تحلیل آزمایشگاهی معتبر نیست." });
+    const client = getGeminiClient();
+
+    if (!client) {
+      console.log("Using localized fallback system for lab diagnosis.");
+      const diagnosisText = getLocalLabDiagnosis(type, data);
+      return res.json({
+        success: true,
+        isAi: false,
+        diagnosis: diagnosisText
+      });
     }
-    return res.json({
+
+    let prompt = "";
+    if (type === "water") {
+      prompt = `
+تو یک متخصص ارشد آزمایشگاهی هیدروشیمی شیلاتی مزارع خاویاری با گواهینامه‌های تخصصی زیست‌شناسی دریای خزر هستی.
+یک نمونه آنالیز هیدروشیمی در استخر ${data.poolName} ثبت شده است:
+- دمای آب: ${data.temp} درجه سلسیوس (ایده‌آل ۱۵-۲۲)
+- اکسیژن محلول: ${data.o2} میلی‌گرم در لیتر (ایده‌آل > ۶)
+- اسیدیته (pH): ${data.ph} (ایده‌آل ۷-۸.۲)
+- نیتریت (NO2): ${data.no2} میلی‌گرم در لیتر (بحرانی > ۰.۱)
+- آمونیاک آزاد سمی (NH3): ${data.nh3} میلی‌گرم در لیتر (بحرانی > ۰.۰۱)
+- شوری/سختی: ${data.salinity} ppt
+
+لطفاً این ارقام آزمایشگاهی را با دانش فنی خود تفسیر زیستی کن و توصیه‌نامه کارگاهی کاملاً تخصصی، دستورالعمل ضدعفونی یا درمانی و راهنمای فوری اقدامات اصلاحی فیلترهای زیستی را بنویس. پاسخ دقیق، فنی و ارزشمند به زبان فارسی باشد.
+`;
+    } else {
+      prompt = `
+تو یک متخصص ارشد بیولوژی مولدین، بیوپسی و سونوگرافی ماهیان خاویاری با رتبه الگوهای تاییدیه شیلاتی هستی.
+یک رکورد سونوگرام روی تاس‌ماهی مولد در استخر ${data.poolName} با مشخصات زیر ثبت شده است:
+- کد پلاک میکروچیپ: ${data.tagId}
+- جنسیت مشخص‌شده: ${data.gender}
+- مرحله پختگی تخمدان (Maturity Stage): ${data.stage} (مراحل ۱ الی ۵)
+- قطر متوسط تخمک: ${data.eggDiameter} میلی‌متر
+- شاخص پلاریزاسیون تخمک (GV Index): ${data.gvIndex} (شاخص نزدیک شدن هسته به غشا؛ ایده‌آل برای خاویاردهی زیر ۰.۰۶)
+
+کامل‌ترین تفسیر را درباره دوره زرده‌افزایی، آمادگی بیولوژیکی برای استحصال خاویار درجه یک صادراتی (بلوگا یا آسترا)، توصیه به تغذیه هورمونی یا شوک‌های سرمایی (کاهش دما تانک برای پختگی تخم‌ها) به زبان فارسی تخصصی شیلات ارائه کن.
+`;
+    }
+
+    const response = await client.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are a head aquaculture lab expert and veterinary consultant for Caspian sturgeon and premium caviar production. Deliver precise, scientifically accurate assessments in Persian.",
+      }
+    });
+
+    const parsedText = response.text || "تحلیل آزمایشگاهی ناموفق بود. مجدداً پارامترها را بررسی کنید.";
+
+    res.json({
       success: true,
-      isAi: false,
-      engine: "permanent-local-expert",
-      diagnosis: getLocalLabDiagnosis(type, data)
+      isAi: true,
+      diagnosis: parsedText
     });
   } catch (error: any) {
-    console.error("Local lab diagnosis error:", error);
+    console.error("Gemini lab diagnosis error:", error);
     res.json({
       success: true,
       isAi: false,
@@ -466,8 +587,13 @@ app.post("/api/diagnose-lab", (req, res) => {
 app.post("/api/auth/login", (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
+    if (typeof username !== "string" || typeof password !== "string" || !username.trim() || !password) {
       return res.status(400).json({ success: false, error: "نام کاربری و رمز عبور الزامی است." });
+    }
+
+    const key = loginKey(req, username);
+    if (isLoginBlocked(key)) {
+      return res.status(429).json({ success: false, error: "تلاش‌های ورود بیش از حد مجاز است. دقایقی بعد دوباره تلاش کنید." });
     }
 
     const serverDB = readServerDB();
@@ -475,6 +601,8 @@ app.post("/api/auth/login", (req, res) => {
 
     const user = users.find((u) => u.username?.toLowerCase() === username.toLowerCase());
     if (!user) {
+      bcrypt.compareSync(password, DUMMY_PASSWORD_HASH);
+      recordLoginFailure(key);
       return res.status(401).json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
     }
 
@@ -494,8 +622,11 @@ app.post("/api/auth/login", (req, res) => {
     }
 
     if (!isMatch) {
+      recordLoginFailure(key);
       return res.status(401).json({ success: false, error: "نام کاربری یا رمز عبور اشتباه است." });
     }
+
+    clearLoginFailures(key);
 
     // Generate secure session token
     const token = generateToken(user.id);
@@ -522,46 +653,28 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 // --- DATABASE SYNC SYSTEM FOR LOCAL NETWORK / INTRA-NET DEPLOYMENT ---
-const DATA_DIR = resolveDataDirectory();
-const serverStore = new ServerStore({
-  dataDir: DATA_DIR,
-  legacyJsonPaths: [
-    path.join(DATA_DIR, "sturgeon_database.json"),
-    path.join(process.cwd(), "sturgeon_database.json"),
-  ],
-});
+const DB_FILE_PATH = path.join(process.cwd(), "sturgeon_database.json");
 let onDatabaseUpdated: (() => void) | null = null;
 
-function readServerDB(): any {
+function readServerDB() {
   try {
-    return serverStore.read();
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const content = fs.readFileSync(DB_FILE_PATH, "utf-8");
+      return JSON.parse(content);
+    }
   } catch (err) {
-    console.error("Error reading server SQLite database:", err);
+    console.error("Error reading server sturgeon_database.json:", err);
   }
   return {};
 }
 
 function writeServerDB(data: any) {
   try {
-    serverStore.write(data);
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
-    console.error("Error writing server SQLite database:", err);
-    throw err;
+    console.error("Error writing server sturgeon_database.json:", err);
   }
 }
-
-app.get("/api/health", (_req, res) => {
-  res.json({ success: true, storage: "sqlite", schemaVersion: 1 });
-});
-
-app.post("/api/db/backup", (req, res) => {
-  const session = verifyToken(req);
-  if (!session || session.role !== "admin") {
-    return res.status(403).json({ success: false, error: "ایجاد پشتیبان سرور فقط برای مدیر مجاز است." });
-  }
-  const backupPath = serverStore.createBackup("manual");
-  return res.json({ success: true, fileName: path.basename(backupPath) });
-});
 
 // GET DB Sync state
 app.get("/api/db/sync", (req, res) => {
@@ -784,10 +897,33 @@ const BOT_CALL_CAPTIONS: Record<string, string[]> = {
 };
 
 async function generateBotResponse(botId: string, userMessage: string, senderName: string): Promise<string> {
+  const client = getGeminiClient();
   const bot = SIMULATED_BOTS.find(b => b.id === botId);
   if (!bot) return "سلام همکار گرامی.";
 
-  // Permanent rule-based local response
+  if (client) {
+    try {
+      const prompt = `
+تو یک پرسنل با تجربه به نام ${bot.name} با سمت "${bot.roleText}" در یک مزارع بزرگ و پیشرفته پرورش فیل‌ماهی و ماهیان خاویاری در شمال ایران هستی.
+همکار شما به نام ${senderName} این پیام را برای شما فرستاده است:
+"${userMessage}"
+
+لطفاً یک پاسخ کوتاه، کاملاً تخصصی، دوستانه، به زبان فارسی روان بنویس. خود را کاملاً در نقش او غوطه‌ور کن و پاسخ را سریع، عملیاتی و متناسب با نیاز کارگاه بده. پاسخ حداکثر در ۲ یا ۳ جمله باشد بدون پیش‌وند یا پساوند اضافی.
+`;
+      const response = await client.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: `You are playing the role of ${bot.name}, who is the ${bot.roleText} at a Caspian Sea caviar farm. Always maintain professional Persian aquaculture dialect.`,
+        }
+      });
+      return response.text?.trim() || "گزارش دریافت شد. در حال بررسی وضعیت هستم.";
+    } catch (e) {
+      console.error("Gemini bot response error:", e);
+    }
+  }
+
+  // Fallback Rule-Based Response
   const msg = userMessage.toLowerCase();
   if (botId === "dr_hashemi") {
     if (msg.includes("تلفات") || msg.includes("مرگ") || msg.includes("بیمار") || msg.includes("مریض")) {
@@ -879,17 +1015,16 @@ async function startServer() {
 
         if (type === "join") {
           const { userId, username, name, token } = data;
-          
-          // Verify identity token if provided, or associate socket
-          let validUserId = userId || "guest";
-          let validUsername = username || "guest";
-          let validName = name || "کاربر عمومی";
-
-          if (token && activeSessions.has(token)) {
-            const sess = activeSessions.get(token)!;
-            validUserId = sess.userId;
-            validUsername = sess.username;
+          // WebSocket clients must prove the same authenticated session used by the API.
+          const session = token ? activeSessions.get(token) : undefined;
+          if (!session || Date.now() - session.createdAt > 24 * 60 * 60 * 1000) {
+            sendToClient("error", { message: "احراز هویت شبکه نامعتبر یا منقضی شده است." });
+            ws.close(1008, "Authentication required");
+            return;
           }
+          const validUserId = session.userId;
+          const validUsername = session.username;
+          const validName = name || username || "کاربر سامانه";
 
           activeSockets.set(currentClientId, { socket: ws, userId: validUserId, username: validUsername, name: validName });
           console.log(`[WS Server] User "${validName}" (${validUsername}) authenticated & joined.`);
@@ -909,7 +1044,15 @@ async function startServer() {
         }
 
         else if (type === "chat:message") {
-          const { message } = data;
+          const connection = activeSockets.get(currentClientId);
+          if (!connection) return sendToClient("error", { message: "ابتدا باید به کانال گفتگو وارد شوید." });
+          const { message: incomingMessage } = data;
+          const message = {
+            ...incomingMessage,
+            senderId: connection.userId,
+            senderName: connection.name,
+            senderRole: connection.username
+          };
           const { senderId, senderName, recipientId } = message;
 
           // Add to server memory
@@ -952,7 +1095,11 @@ async function startServer() {
         }
 
         else if (type === "call:request") {
-          const { callId, senderId, senderName, recipientId, callType } = data;
+          const connection = activeSockets.get(currentClientId);
+          if (!connection) return sendToClient("error", { message: "ابتدا باید احراز هویت شوید." });
+          const { callId, recipientId, callType } = data;
+          const senderId = connection.userId;
+          const senderName = connection.name;
           console.log(`[WS Server] Call request: ${senderName} calling ${recipientId} (${callType})`);
 
           // Relay to recipient if they are online
@@ -1063,16 +1210,14 @@ async function startServer() {
     });
   });
 
-  if (process.env.NODE_ENV !== "production" && !STATIC_PREVIEW) {
+  if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = process.env.FATHI_ERP_DIST_DIR
-      ? path.resolve(process.env.FATHI_ERP_DIST_DIR)
-      : path.join(process.cwd(), "dist");
+    const distPath = path.join(process.cwd(), "dist");
 
     // Security check: Never serve server bundle, sourcemaps or config files via public static middleware
     app.use((req, res, next) => {
@@ -1097,19 +1242,7 @@ async function startServer() {
 
   httpServer.listen(PORT, HOST, () => {
     console.log(`[Sturgeon Server] App running with WS support on http://${HOST}:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-    console.log(`[Sturgeon Server] Durable data directory: ${DATA_DIR}`);
   });
-
-  const shutdown = () => {
-    wss.close();
-    httpServer.close(() => {
-      serverStore.close();
-      process.exit(0);
-    });
-    setTimeout(() => process.exit(1), 5_000).unref();
-  };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
 }
 
 startServer();

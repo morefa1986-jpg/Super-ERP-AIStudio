@@ -97,7 +97,10 @@ export const MortalityManager: React.FC<MortalityManagerProps> = ({
     try {
       const res = await fetch("/api/diagnose", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(localStorage.getItem("sturgeon_auth_token") ? { Authorization: `Bearer ${localStorage.getItem("sturgeon_auth_token")}` } : {})
+        },
         body: JSON.stringify({
           poolName: activePool ? activePool.name : "استخر نامشخص",
           breed: activePool ? activePool.breed : "ماهی خاویاری",

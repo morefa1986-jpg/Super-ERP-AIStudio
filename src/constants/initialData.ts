@@ -330,7 +330,7 @@ export const INITIAL_HALLS: Hall[] = [
   { id: 4, name: "سالن ۴ (پیش پروار ۶ متری)", description: "شامل ۷ استخر قطر ۶ متر پیش‌پرونده با تراکم و حجم بالاتر آب", poolIds: INITIAL_POOLS.filter(p => p.hallId === 4).map(p => p.id) },
   { id: 5, name: "سالن ۵ (پیش پروار ۶ متری)", description: "شامل ۷ استخر قطر ۶ متر پیش‌پرونده مکمل سالن ۴", poolIds: INITIAL_POOLS.filter(p => p.hallId === 5).map(p => p.id) },
   { id: 6, name: "سالن ۶ (استخر نرسری - در حال احداث)", description: "سالن جدید در دست احداث جهت توسعه بخش نرسری و لارو ریزی کادرهای اختصاصی", isUnderConstruction: true, poolIds: [] },
-  { id: 7, name: "سالن ۷ (تکثیر و مولدین)", description: "سالن تکثیر شامل ۲ استخر اصلی به ابعاد ۱۷۶ و ۲۰۶ متر مربع و کادرهای فرعی تکثیر بعدا تکمیل می‌شود", poolIds: INITIAL_POOLS.filter(p => p.hallId === 7).map(p => p.id) },
+  { id: 7, name: "سالن ۷ (تکثیر و مولدین)", description: "سالن تکثیر شامل دو استخر اصلی به مساحت ۱۷۶ و ۲۰۶ مترمربع است؛ فضاهای فرعی تکثیر از طریق تنظیمات مدیر قابل تعریف هستند.", poolIds: INITIAL_POOLS.filter(p => p.hallId === 7).map(p => p.id) },
   { id: 8, name: "سالن ۸ (پیش مولدین)", description: "شامل ۵ استخر قطر ۱۰ متر جهت نگهداری پیش‌مولدها و کنترل روند بلوغ خاویار", poolIds: INITIAL_POOLS.filter(p => p.hallId === 8).map(p => p.id) },
   { id: 9, name: "سالن ۹ (پیش مولدین)", description: "شامل ۵ استخر قطر ۱۰ متر مکمل پیش‌مولدین ویژه تاس‌ماهی ایرانی قره‌برون و چالباش", poolIds: INITIAL_POOLS.filter(p => p.hallId === 9).map(p => p.id) },
   { id: 10, name: "سالن ۱۰ (پرواری نهایی)", description: "شامل ۶ استخر قطر ۱۰ متر پرواری، ۱ استخر قطر ۴ متر قرنطینه و ۱ استخر خطی چندبخشی قابل تقسیم", poolIds: INITIAL_POOLS.filter(p => p.hallId === 10).map(p => p.id) },

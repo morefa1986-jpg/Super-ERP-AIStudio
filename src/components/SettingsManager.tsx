@@ -28,8 +28,7 @@ import { CENTRAL_THRESHOLDS, saveCentralThresholds, DEFAULT_THRESHOLDS } from ".
 import { SturgeonRepository } from "../storage/repository";
 import { NetworkSyncManager } from "./NetworkSyncManager";
 import { createBackup, restoreBackup } from "../storage/backup";
-import { createTemporaryPassword } from "../core/security";
-import { FARM_SETUP_COMPLETION_KEY } from "../core/farmSetup";
+import bcrypt from "bcryptjs";
 
 interface SettingsManagerProps {
   pools: Pool[];
@@ -62,7 +61,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
   iotGatewayUrl: "http://fathi-iot.local:8080/v1",
   autoBackupInterval: "daily",
   dailyFeedCeilingKg: 1200,
-  smsAlertNumber: "",
+  smsAlertNumber: "09113214567",
   waterCirculationRate: 92,
   targetWaterTemp: 16.5
 };
@@ -120,13 +119,13 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
     if (window.confirm("آیا از بازنشانی مجدد اطلاعات فارم خاویاری به داده‌های خام مطمئن هستید؟")) {
       localStorage.clear();
       
-      const temporaryAdminPassword = createTemporaryPassword();
+      const temporaryAdminPassword = crypto.randomUUID().slice(0, 12);
       const defaultUsers = [
         {
           id: "admin",
           name: "مدیر سیستم",
           username: "admin",
-          password: temporaryAdminPassword,
+          password: bcrypt.hashSync(temporaryAdminPassword, 10),
           role: "admin",
           permissions: ["all"]
         }
@@ -140,12 +139,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
         window.location.reload();
       }, 1500);
     }
-  };
-
-  const handleReopenFarmSetup = () => {
-    if (!window.confirm("راه‌انداز سالن، استخر و موجودی دوباره باز شود؟ داده‌های فعلی پاک نمی‌شوند و تا تأیید نهایی فقط در پیش‌نویس خواهند بود.")) return;
-    localStorage.removeItem(FARM_SETUP_COMPLETION_KEY);
-    window.location.reload();
   };
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -269,7 +262,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6">
       
       {/* Toast Notification */}
       {toast && (
@@ -491,7 +484,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                     value={general.iotGatewayUrl}
                     onChange={(e) => setGeneral({ ...general, iotGatewayUrl: e.target.value })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
-                    placeholder="http://fathi-iot.local:8080/v1"
+                    placeholder="https://api.iot-sturgeon-gateway.local:8080/v1"
                   />
                 </div>
 
@@ -744,26 +737,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
               </div>
             </div>
           </div>
-
-          {isAdmin && (
-            <div className="space-y-4">
-              <div className="border-b border-natural-border/60 pb-3">
-                <h3 className="text-sm font-black text-natural-dark flex items-center gap-2">
-                  <Building2 className="text-natural-forest" size={18} />
-                  راه‌اندازی سالن‌ها، استخرها و موجودی اولیه
-                </h3>
-                <p className="text-[11px] text-natural-text/60 mt-1">راه‌انداز سه‌مرحله‌ای را با اطلاعات فعلی باز می‌کند؛ هیچ داده‌ای تا تأیید نهایی حذف یا جایگزین نمی‌شود.</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleReopenFarmSetup}
-                className="w-full md:w-auto px-5 py-3 bg-natural-forest text-white text-xs font-black rounded-xl flex items-center justify-center gap-2"
-              >
-                <Building2 size={15} />
-                بازکردن دوباره راه‌انداز اولیه
-              </button>
-            </div>
-          )}
 
           {/* Section: Calibration and Factory Reset */}
           <div className="space-y-4">

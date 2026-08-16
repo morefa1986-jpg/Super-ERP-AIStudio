@@ -11,6 +11,7 @@ import {
   HelpCircle 
 } from "lucide-react";
 import { SturgeonRepository } from "../storage/repository";
+import { ConnectionSettings, getConnectionSettings, getApiUrl, saveConnectionSettings } from "../network/connection";
 
 interface NetworkSyncManagerProps {
   onSyncComplete?: () => void;
@@ -23,6 +24,17 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
   const [localIp, setLocalIp] = useState<string>("در حال دریافت...");
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [connection, setConnection] = useState<ConnectionSettings>(() => getConnectionSettings());
+  const [connectionMessage, setConnectionMessage] = useState<string>("");
+
+  const testConnection = async () => {
+    try {
+      saveConnectionSettings(connection);
+      const response = await fetch(getApiUrl("/api/health"), { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setConnectionMessage("اتصال سرور با موفقیت برقرار شد.");
+    } catch (error) { setConnectionMessage(error instanceof Error ? error.message : "اتصال برقرار نشد."); }
+  };
 
   // Perform synchronization
   const performSync = async (silent: boolean = false) => {
@@ -87,7 +99,7 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
   };
 
   return (
-    <div className="bg-white border border-natural-border rounded-3xl p-5 shadow-sm space-y-4 text-right" dir="rtl">
+    <div className="bg-white border border-natural-border rounded-3xl p-5 shadow-sm space-y-4 text-start">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-natural-border pb-4">
         <div className="flex items-center gap-2.5">
@@ -137,6 +149,13 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
       </div>
 
       {/* Main Stats Block */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-natural-bg/20 border border-natural-border/60 rounded-2xl" data-connection-settings>
+        <label className="text-[10px] font-bold">پروتکل<select value={connection.protocol} onChange={e => setConnection({ ...connection, protocol: e.target.value as "http" | "https" })} className="mt-1 w-full rounded-lg border p-2 text-xs"><option value="http">HTTP</option><option value="https">HTTPS</option></select></label>
+        <label className="text-[10px] font-bold">سرور<input value={connection.host} disabled={connection.useSameOrigin} onChange={e => setConnection({ ...connection, host: e.target.value })} className="mt-1 w-full rounded-lg border p-2 text-xs" /></label>
+        <label className="text-[10px] font-bold">پورت<input type="number" min="1" max="65535" value={connection.port} disabled={connection.useSameOrigin} onChange={e => setConnection({ ...connection, port: Number(e.target.value) })} className="mt-1 w-full rounded-lg border p-2 text-xs" /></label>
+        <div className="flex flex-col justify-end gap-2"><label className="text-[10px] font-bold"><input type="checkbox" checked={connection.useSameOrigin} onChange={e => setConnection({ ...connection, useSameOrigin: e.target.checked })} /> استفاده از همین سرور</label><button onClick={testConnection} className="rounded-lg bg-natural-dark text-white px-3 py-2 text-xs font-bold">ذخیره و تست اتصال</button>{connectionMessage && <span className="text-[10px]">{connectionMessage}</span>}</div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Sync Status Details */}
         <div className="bg-natural-bg/20 border border-natural-border/60 rounded-2xl p-4 flex flex-col justify-between space-y-3">

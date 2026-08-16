@@ -567,7 +567,10 @@ export default function LabManager({ pools }: LabManagerProps) {
     try {
       const res = await fetch("/api/diagnose-lab", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(localStorage.getItem("sturgeon_auth_token") ? { Authorization: `Bearer ${localStorage.getItem("sturgeon_auth_token")}` } : {})
+        },
         body: JSON.stringify(payload)
       });
       const resData = await res.json();

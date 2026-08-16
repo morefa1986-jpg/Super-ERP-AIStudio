@@ -97,7 +97,7 @@ export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDa
               : toastType === "offline"
               ? "bg-slate-900/95 border-amber-500/50 text-amber-300 backdrop-blur-md"
               : "bg-slate-900/95 border-rose-500/50 text-rose-300 backdrop-blur-md"
-          }`} dir="rtl">
+          }`}>
             {toastType === "success" && <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />}
             {toastType === "offline" && <WifiOff size={18} className="text-amber-400 shrink-0 mt-0.5" />}
             {toastType === "warning" && <AlertTriangle size={18} className="text-rose-400 shrink-0 mt-0.5" />}
