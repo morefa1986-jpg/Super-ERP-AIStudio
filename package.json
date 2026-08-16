@@ -9,7 +9,7 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test:core": "tsx tests/core-stock.test.ts && tsx tests/backup.test.ts && tsx tests/i18n.test.ts && tsx tests/connection.test.ts && tsx tests/accounting.test.ts && tsx tests/rate-limiter.test.ts && tsx tests/numeric-inputs.test.ts"
+    "test:core": "tsx tests/core-stock.test.ts && tsx tests/backup.test.ts && tsx tests/i18n.test.ts && tsx tests/connection.test.ts && tsx tests/accounting.test.ts && tsx tests/rate-limiter.test.ts && tsx tests/numeric-inputs.test.ts && tsx tests/aquaculture-utils.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

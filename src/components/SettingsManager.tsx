@@ -146,9 +146,27 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
     setTimeout(() => setToast(null), 3000);
   };
 
+  const validateRange = (label: string, value: number, min: number, max: number): string | null => {
+    return Number.isFinite(value) && value >= min && value <= max
+      ? null
+      : `${label} باید بین ${min} و ${max} باشد.`;
+  };
+
   // Save General Settings
   const handleSaveGeneral = (e: React.FormEvent) => {
     e.preventDefault();
+    const validations = [
+      validateRange("ضریب تبدیل غذایی پایه", general.fcrBaseCoefficient, 0.5, 3),
+      validateRange("سقف خوراک روزانه کل فارم", general.dailyFeedCeilingKg, 0, 100000),
+      validateRange("نرخ چرخش آب پساب تصفیه شده", general.waterCirculationRate, 0, 100),
+      validateRange("دمای آب هدف بیولوژیکی", general.targetWaterTemp, 1, 30)
+    ];
+    const firstError = validations.find(Boolean);
+    if (firstError) {
+      showToast(firstError, "error");
+      return;
+    }
+
     localStorage.setItem("sturgeon_general_settings_v2", JSON.stringify(general));
     showToast("تنظیمات عمومی فارم با موفقیت ذخیره گردید.");
     if (onReloadData) {
@@ -159,6 +177,46 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
   // Save Thresholds Settings
   const handleSaveThresholds = (e: React.FormEvent) => {
     e.preventDefault();
+    const thresholdValidations = [
+      validateRange("حداقل بحرانی دمای آب", Number(tempCritMin), 0, 40),
+      validateRange("حداقل بهینه دمای آب", Number(tempMin), 0, 40),
+      validateRange("حداکثر بهینه دمای آب", Number(tempMax), 0, 40),
+      validateRange("حداکثر بحرانی دمای آب", Number(tempCritMax), 0, 40),
+      validateRange("حداقل بحرانی اکسیژن محلول", Number(o2CritMin), 0, 30),
+      validateRange("حداقل بهینه اکسیژن محلول", Number(o2Min), 0, 30),
+      validateRange("حداکثر بهینه اکسیژن محلول", Number(o2Max), 0, 30),
+      validateRange("حداکثر بحرانی اکسیژن محلول", Number(o2CritMax), 0, 30),
+      validateRange("حداقل بحرانی pH آب", Number(phCritMin), 0, 14),
+      validateRange("حداقل بهینه pH آب", Number(phMin), 0, 14),
+      validateRange("حداکثر بهینه pH آب", Number(phMax), 0, 14),
+      validateRange("حداکثر بحرانی pH آب", Number(phCritMax), 0, 14),
+      validateRange("حداکثر مجاز نیتریت", Number(nitriteMax), 0, 10),
+      validateRange("حداکثر بحرانی نیتریت", Number(nitriteCritMax), 0, 10),
+      validateRange("حداکثر مجاز آمونیاک آزاد", Number(ammoniaMax), 0, 10),
+      validateRange("حداکثر بحرانی آمونیاک آزاد", Number(ammoniaCritMax), 0, 10)
+    ];
+    const firstThresholdError = thresholdValidations.find(Boolean);
+    if (firstThresholdError) {
+      showToast(firstThresholdError, "error");
+      return;
+    }
+
+    if (!(Number(tempCritMin) <= Number(tempMin) && Number(tempMin) <= Number(tempMax) && Number(tempMax) <= Number(tempCritMax))) {
+      showToast("ترتیب آستانه‌های دمای آب باید از حداقل بحرانی تا حداکثر بحرانی افزایشی باشد.", "error");
+      return;
+    }
+    if (!(Number(o2CritMin) <= Number(o2Min) && Number(o2Min) <= Number(o2Max) && Number(o2Max) <= Number(o2CritMax))) {
+      showToast("ترتیب آستانه‌های اکسیژن محلول باید از حداقل بحرانی تا حداکثر بحرانی افزایشی باشد.", "error");
+      return;
+    }
+    if (!(Number(phCritMin) <= Number(phMin) && Number(phMin) <= Number(phMax) && Number(phMax) <= Number(phCritMax))) {
+      showToast("ترتیب آستانه‌های pH باید از حداقل بحرانی تا حداکثر بحرانی افزایشی باشد.", "error");
+      return;
+    }
+    if (Number(nitriteMax) > Number(nitriteCritMax) || Number(ammoniaMax) > Number(ammoniaCritMax)) {
+      showToast("حداکثر مجاز نیتریت و آمونیاک نباید از مقدار بحرانی بیشتر باشد.", "error");
+      return;
+    }
     
     const newThresholds = {
       temperature: {
@@ -408,6 +466,10 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                   <input
                     type="number"
                     step="0.01"
+                    min="0.5"
+                    max="3"
+                    required
+                    aria-label="ضریب تبدیل غذایی پایه"
                     value={general.fcrBaseCoefficient}
                     onChange={(e) => setGeneral({ ...general, fcrBaseCoefficient: parseFloat(e.target.value) || 0 })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
@@ -418,6 +480,10 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                   <label className="text-xs font-bold text-natural-dark block">سقف خوراک روزانه کل فارم (Kg)</label>
                   <input
                     type="number"
+                    min="0"
+                    max="100000"
+                    required
+                    aria-label="سقف خوراک روزانه کل فارم به کیلوگرم"
                     value={general.dailyFeedCeilingKg}
                     onChange={(e) => setGeneral({ ...general, dailyFeedCeilingKg: parseInt(e.target.value) || 0 })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
@@ -428,6 +494,10 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                   <label className="text-xs font-bold text-natural-dark block">نرخ چرخش آب پساب تصفیه شده (%)</label>
                   <input
                     type="number"
+                    min="0"
+                    max="100"
+                    required
+                    aria-label="نرخ چرخش آب پساب تصفیه شده درصد"
                     value={general.waterCirculationRate}
                     onChange={(e) => setGeneral({ ...general, waterCirculationRate: parseInt(e.target.value) || 0 })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
@@ -439,6 +509,10 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                   <input
                     type="number"
                     step="0.1"
+                    min="1"
+                    max="30"
+                    required
+                    aria-label="دمای آب هدف بیولوژیکی"
                     value={general.targetWaterTemp}
                     onChange={(e) => setGeneral({ ...general, targetWaterTemp: parseFloat(e.target.value) || 0 })}
                     className="w-full text-xs p-3 rounded-xl border border-natural-border bg-natural-bg/20 focus:outline-none focus:border-natural-forest text-natural-dark font-mono text-left"
@@ -566,19 +640,19 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بحرانی (Critical Min)</span>
-                  <input type="number" step="0.1" value={tempCritMin} onChange={e => setTempCritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="40" required aria-label="حداقل بحرانی دمای آب" value={tempCritMin} onChange={e => setTempCritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بهینه (Optimal Min)</span>
-                  <input type="number" step="0.1" value={tempMin} onChange={e => setTempMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="40" required aria-label="حداقل بهینه دمای آب" value={tempMin} onChange={e => setTempMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بهینه (Optimal Max)</span>
-                  <input type="number" step="0.1" value={tempMax} onChange={e => setTempMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="40" required aria-label="حداکثر بهینه دمای آب" value={tempMax} onChange={e => setTempMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بحرانی (Critical Max)</span>
-                  <input type="number" step="0.1" value={tempCritMax} onChange={e => setTempCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="40" required aria-label="حداکثر بحرانی دمای آب" value={tempCritMax} onChange={e => setTempCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
               </div>
             </div>
@@ -592,19 +666,19 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بحرانی (Critical Min)</span>
-                  <input type="number" step="0.1" value={o2CritMin} onChange={e => setO2CritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="30" required aria-label="حداقل بحرانی اکسیژن محلول" value={o2CritMin} onChange={e => setO2CritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بهینه (Optimal Min)</span>
-                  <input type="number" step="0.1" value={o2Min} onChange={e => setO2Min(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="30" required aria-label="حداقل بهینه اکسیژن محلول" value={o2Min} onChange={e => setO2Min(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بهینه (Optimal Max)</span>
-                  <input type="number" step="0.1" value={o2Max} onChange={e => setO2Max(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="30" required aria-label="حداکثر بهینه اکسیژن محلول" value={o2Max} onChange={e => setO2Max(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بحرانی (Critical Max)</span>
-                  <input type="number" step="0.1" value={o2CritMax} onChange={e => setO2CritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="30" required aria-label="حداکثر بحرانی اکسیژن محلول" value={o2CritMax} onChange={e => setO2CritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
               </div>
             </div>
@@ -618,19 +692,19 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بحرانی (Critical Min)</span>
-                  <input type="number" step="0.1" value={phCritMin} onChange={e => setPhCritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="14" required aria-label="حداقل بحرانی pH آب" value={phCritMin} onChange={e => setPhCritMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداقل بهینه (Optimal Min)</span>
-                  <input type="number" step="0.1" value={phMin} onChange={e => setPhMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="14" required aria-label="حداقل بهینه pH آب" value={phMin} onChange={e => setPhMin(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بهینه (Optimal Max)</span>
-                  <input type="number" step="0.1" value={phMax} onChange={e => setPhMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="14" required aria-label="حداکثر بهینه pH آب" value={phMax} onChange={e => setPhMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-natural-text/60 font-semibold block">حداکثر بحرانی (Critical Max)</span>
-                  <input type="number" step="0.1" value={phCritMax} onChange={e => setPhCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                  <input type="number" step="0.1" min="0" max="14" required aria-label="حداکثر بحرانی pH آب" value={phCritMax} onChange={e => setPhCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                 </div>
               </div>
             </div>
@@ -645,11 +719,11 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <span className="text-[9.5px] text-[#A65D50]/80 font-bold block">هشدار (Max Allowed)</span>
-                    <input type="number" step="0.001" value={ammoniaMax} onChange={e => setAmmoniaMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                    <input type="number" step="0.001" min="0" max="10" required aria-label="حداکثر مجاز آمونیاک آزاد" value={ammoniaMax} onChange={e => setAmmoniaMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                   </div>
                   <div className="space-y-1">
                     <span className="text-[9.5px] text-rose-800 font-bold block">بحرانی (Critical Max)</span>
-                    <input type="number" step="0.001" value={ammoniaCritMax} onChange={e => setAmmoniaCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                    <input type="number" step="0.001" min="0" max="10" required aria-label="حداکثر بحرانی آمونیاک آزاد" value={ammoniaCritMax} onChange={e => setAmmoniaCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                   </div>
                 </div>
               </div>
@@ -662,11 +736,11 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ pools, halls, 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <span className="text-[9.5px] text-[#A65D50]/80 font-bold block">هشدار (Max Allowed)</span>
-                    <input type="number" step="0.001" value={nitriteMax} onChange={e => setNitriteMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                    <input type="number" step="0.001" min="0" max="10" required aria-label="حداکثر مجاز نیتریت" value={nitriteMax} onChange={e => setNitriteMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                   </div>
                   <div className="space-y-1">
                     <span className="text-[9.5px] text-rose-800 font-bold block">بحرانی (Critical Max)</span>
-                    <input type="number" step="0.001" value={nitriteCritMax} onChange={e => setNitriteCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
+                    <input type="number" step="0.001" min="0" max="10" required aria-label="حداکثر بحرانی نیتریت" value={nitriteCritMax} onChange={e => setNitriteCritMax(Number(e.target.value))} className="w-full text-xs p-2.5 rounded-lg border border-natural-border focus:outline-none font-mono text-left" />
                   </div>
                 </div>
               </div>

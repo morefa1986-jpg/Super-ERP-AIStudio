@@ -254,6 +254,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       showToast("لطفاً تمام مشخصات پرسنل را به دقت وارد کنید.", "error");
       return;
     }
+    if (newStaffPassword.trim().length < 8) {
+      showToast("رمز عبور باید حداقل ۸ کاراکتر باشد.", "error");
+      return;
+    }
 
     const usernameLower = newStaffUsername.trim().toLowerCase();
     if (userList.some(u => u.username?.toLowerCase() === usernameLower)) {
@@ -299,8 +303,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   };
 
   const handleUpdatePassword = (userId: string) => {
-    if (!tempPassword.trim()) {
-      showToast("رمز عبور جدید نمی‌تواند خالی باشد.", "error");
+    if (tempPassword.trim().length < 8) {
+      showToast("رمز عبور جدید باید حداقل ۸ کاراکتر باشد.", "error");
       return;
     }
     const userToUpdate = userList.find(u => u.id === userId);
@@ -748,6 +752,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   </p>
                   <input 
                     type="text"
+                    required
                     value={activeConfirmation.verificationText}
                     onChange={(e) => setActiveConfirmation({
                       ...activeConfirmation,
@@ -1086,6 +1091,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   <label className="text-[10.5px] font-bold text-natural-dark block">کاربری هیدرولیک</label>
                   <input 
                     type="text"
+                    required
                     value={newPoolPurpose}
                     onChange={(e) => setNewPoolPurpose(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-natural-border bg-white focus:outline-none focus:border-natural-forest"
@@ -1438,8 +1444,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-[10.5px] font-bold text-natural-dark block">رمز عبور ورود</label>
                   <input 
-                    type="text"
-                    placeholder="مثال: 5678"
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    placeholder="حداقل ۸ کاراکتر"
                     value={newStaffPassword}
                     onChange={(e) => setNewStaffPassword(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-natural-border bg-white focus:outline-none focus:border-[#D68227] font-mono text-left"
@@ -1653,7 +1662,9 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                           <div className="flex justify-between items-center gap-2">
                             <span className="text-natural-text/60 font-sans text-[9px]">رمز عبور جدید:</span>
                             <input
-                              type="text"
+                              type="password"
+                              minLength={8}
+                              autoComplete="new-password"
                               value={tempPassword}
                               onChange={(e) => setTempPassword(e.target.value)}
                               placeholder="رمز جدید"

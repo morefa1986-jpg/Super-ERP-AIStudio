@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { 
   Building2, 
   Layers, 
@@ -95,9 +95,11 @@ const LANG_DICT = {
     logout: "خروج از حساب کاربری",
     syncStatus: "شبکه محلی (LAN Sync)",
     synced: "بروز و متصل",
+    unauthorized: "ورود مجدد لازم است",
     offline: "قطع (آفلاین)",
     map: "نقشه استخرها",
     stats: "آمار بیوماس",
+    realtime: "ثبت آنی و محاسبات استخر",
     feeding: "محاسبه جیره",
     transfer: "دفتر جابه‌جایی",
     mortality: "تلفات مزارع",
@@ -114,6 +116,20 @@ const LANG_DICT = {
     admin: "مدیریت زیرساخت",
     settings: "تنظیمات عمومی",
     chat: "بیسیم و گفتگو",
+    report: "گزارش جامع سیستم و معماری (FA)",
+    departments: "ادارات و بخش‌های جانبی",
+    managementSection: "مدیریت ارشد و تنظیمات عمومی",
+    adminConfig: "پیکربندی عمومی و کالبدی فارم",
+    farmDatabase: "پایگاه اطلاعاتی مزرعه خاویاری فتحی",
+    onlineConnected: "سیستم برخط و متصل",
+    localMode: "حالت محلی / آفلاین",
+    mainNavLabel: "منوی اصلی سامانه",
+    mobileMenuOpen: "باز کردن منوی اصلی",
+    mobileMenuClose: "بستن منوی اصلی",
+    quick: "سریع",
+    live: "برخط",
+    new: "جدید",
+    adminBadge: "ادمین",
     themeMode: "حالت بصری",
     dark: "تاریک",
     light: "روشن",
@@ -126,9 +142,11 @@ const LANG_DICT = {
     logout: "تسجيل الخروج",
     syncStatus: "الشبكة المحلية (LAN Sync)",
     synced: "محدث ومتصل",
+    unauthorized: "يلزم تسجيل الدخول مجددا",
     offline: "منقطع (أوفلاين)",
     map: "خريطة الصالات",
     stats: "إحصائيات البيوماس",
+    realtime: "تسجيل فوري وحسابات الحوض",
     feeding: "حساب العليقة",
     transfer: "دفتر النقل",
     mortality: "نفوق الأسماك",
@@ -145,6 +163,20 @@ const LANG_DICT = {
     admin: "إدارة البنية التحتية",
     settings: "الإعدادات العامة",
     chat: "اللاسلكي والمحادثة",
+    report: "تقرير النظام والبنية (FA)",
+    departments: "الإدارات والأقسام الجانبية",
+    managementSection: "الإدارة العليا والإعدادات",
+    adminConfig: "تهيئة عامة وهيكلية للمزرعة",
+    farmDatabase: "قاعدة بيانات مزرعة فتحي للكافيار",
+    onlineConnected: "النظام متصل ومباشر",
+    localMode: "وضع محلي / أوفلاين",
+    mainNavLabel: "القائمة الرئيسية للنظام",
+    mobileMenuOpen: "فتح القائمة الرئيسية",
+    mobileMenuClose: "إغلاق القائمة الرئيسية",
+    quick: "سريع",
+    live: "مباشر",
+    new: "جديد",
+    adminBadge: "مدير",
     themeMode: "الوضع البصري",
     dark: "داكن",
     light: "مضيء",
@@ -157,9 +189,11 @@ const LANG_DICT = {
     logout: "Log Out",
     syncStatus: "Local LAN Sync",
     synced: "Synced & Connected",
+    unauthorized: "Sign-in Required",
     offline: "Disconnected",
     map: "Halls Map",
     stats: "Biomass Stats",
+    realtime: "Instant Pool Logging",
     feeding: "Feeding Diet",
     transfer: "Transfer Logs",
     mortality: "Mortality Analyzer",
@@ -176,6 +210,20 @@ const LANG_DICT = {
     admin: "Admin Control",
     settings: "System Settings",
     chat: "Intercom & Radio",
+    report: "System & Architecture Report (FA)",
+    departments: "Auxiliary Departments",
+    managementSection: "Senior Management & Settings",
+    adminConfig: "Farm Structure Configuration",
+    farmDatabase: "Fathi Sturgeon Farm Database",
+    onlineConnected: "Online and Connected",
+    localMode: "Local / Offline Mode",
+    mainNavLabel: "Main ERP Navigation",
+    mobileMenuOpen: "Open main menu",
+    mobileMenuClose: "Close main menu",
+    quick: "Quick",
+    live: "Live",
+    new: "New",
+    adminBadge: "Admin",
     themeMode: "Visual Mode",
     dark: "Dark",
     light: "Light",
@@ -188,9 +236,11 @@ const LANG_DICT = {
     logout: "Abmelden",
     syncStatus: "Lokale LAN-Synchronisation",
     synced: "Synchronisiert",
+    unauthorized: "Anmeldung erforderlich",
     offline: "Offline",
     map: "Hallenplan",
     stats: "Biomasse-Statistik",
+    realtime: "Sofortprotokoll",
     feeding: "Futterration",
     transfer: "Umlagerung",
     mortality: "Mortalitätsanalyse",
@@ -207,13 +257,27 @@ const LANG_DICT = {
     admin: "Admin-Bereich",
     settings: "Einstellungen",
     chat: "Intercom & Funk",
+    report: "System- und Architekturbericht (FA)",
+    departments: "Zusätzliche Abteilungen",
+    managementSection: "Leitung und Einstellungen",
+    adminConfig: "Farmstruktur konfigurieren",
+    farmDatabase: "Datenbank der Fathi Störzucht",
+    onlineConnected: "Online und verbunden",
+    localMode: "Lokaler / Offline-Modus",
+    mainNavLabel: "ERP-Hauptnavigation",
+    mobileMenuOpen: "Hauptmenü öffnen",
+    mobileMenuClose: "Hauptmenü schließen",
+    quick: "Schnell",
+    live: "Live",
+    new: "Neu",
+    adminBadge: "Admin",
     themeMode: "Modus",
     dark: "Dunkel",
     light: "Hell",
     lang: "Sprache"
   },
   ru: {
-    farmName: "Осетровая ферма Фатхи", subtitle: "ERP-система осетрового хозяйства", observer: "Ответственный оператор:", logout: "Выйти", syncStatus: "Локальная синхронизация", synced: "Синхронизировано", offline: "Офлайн", map: "Карта бассейнов", stats: "Биомасса", feeding: "Рацион кормления", transfer: "Перемещения", mortality: "Падёж", lab: "Биометрическая лаборатория", archive: "Архив событий", facilities: "Инженерные системы", processing: "Переработка икры", feedmill: "Кормовой цех", inventory: "Центральный склад", accounting: "Финансы", security: "Безопасность", coldstorage: "Холодильник", traceability: "Прослеживаемость", admin: "Администрирование", settings: "Настройки", chat: "Связь", themeMode: "Тема", dark: "Тёмная", light: "Светлая", lang: "Язык"
+    farmName: "Осетровая ферма Фатхи", subtitle: "ERP-система осетрового хозяйства", observer: "Ответственный оператор:", logout: "Выйти", syncStatus: "Локальная синхронизация", synced: "Синхронизировано", unauthorized: "Требуется вход", offline: "Офлайн", map: "Карта бассейнов", stats: "Биомасса", realtime: "Оперативный журнал", feeding: "Рацион кормления", transfer: "Перемещения", mortality: "Падёж", lab: "Биометрическая лаборатория", archive: "Архив событий", facilities: "Инженерные системы", processing: "Переработка икры", feedmill: "Кормовой цех", inventory: "Центральный склад", accounting: "Финансы", security: "Безопасность", coldstorage: "Холодильник", traceability: "Прослеживаемость", admin: "Администрирование", settings: "Настройки", chat: "Связь", report: "Отчет системы и архитектуры (FA)", departments: "Дополнительные отделы", managementSection: "Руководство и настройки", adminConfig: "Настройка структуры фермы", farmDatabase: "База данных фермы Фатхи", onlineConnected: "Онлайн и подключено", localMode: "Локальный / офлайн режим", mainNavLabel: "Главная навигация ERP", mobileMenuOpen: "Открыть главное меню", mobileMenuClose: "Закрыть главное меню", quick: "Быстро", live: "Онлайн", new: "Новое", adminBadge: "Админ", themeMode: "Тема", dark: "Тёмная", light: "Светлая", lang: "Язык"
   }
 };
 
@@ -255,14 +319,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("sturgeon_lang", language);
     const root = document.documentElement;
+    root.classList.remove("lang-fa", "lang-ar", "lang-en", "lang-de", "lang-ru");
     if (["en", "de", "ru"].includes(language)) {
       root.setAttribute("dir", "ltr");
       root.classList.add(`lang-${language}`);
-      root.classList.remove("lang-fa", "lang-ar");
     } else {
       root.setAttribute("dir", "rtl");
       root.classList.add(`lang-${language}`);
-      root.classList.remove("lang-en", "lang-de");
     }
     root.setAttribute("lang", language);
   }, [language]);
@@ -358,6 +421,29 @@ export default function App() {
 
   // Navigation states
   const [activeTab, setActiveTab] = useState<"map" | "stats" | "feeding" | "transfer" | "mortality" | "lab" | "archive" | "realtime" | "facilities" | "processing" | "feedmill" | "inventory" | "accounting" | "security" | "coldstorage" | "traceability" | "admin" | "settings" | "chat" | "report">("map");
+  const activeTabTitles: Record<typeof activeTab, string> = {
+    map: activeTranslations.map,
+    stats: activeTranslations.stats,
+    realtime: activeTranslations.realtime,
+    feeding: activeTranslations.feeding,
+    transfer: activeTranslations.transfer,
+    mortality: activeTranslations.mortality,
+    lab: activeTranslations.lab,
+    archive: activeTranslations.archive,
+    facilities: activeTranslations.facilities,
+    processing: activeTranslations.processing,
+    feedmill: activeTranslations.feedmill,
+    inventory: activeTranslations.inventory,
+    accounting: activeTranslations.accounting,
+    security: activeTranslations.security,
+    coldstorage: activeTranslations.coldstorage,
+    traceability: activeTranslations.traceability,
+    admin: activeTranslations.admin,
+    settings: activeTranslations.settings,
+    chat: activeTranslations.chat,
+    report: activeTranslations.report
+  };
+  const activeTabTitle = activeTabTitles[activeTab];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [selectedHallId, setSelectedHallId] = useState<number>(1);
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
@@ -371,13 +457,38 @@ export default function App() {
     citesBatch?: any;
   }>({ isOpen: false });
 
-  const [syncState, setSyncState] = useState<"synced" | "offline">("synced");
+  useEffect(() => {
+    const handleGlobalShortcuts = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen(open => !open);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalShortcuts);
+    return () => window.removeEventListener("keydown", handleGlobalShortcuts);
+  }, []);
+
+  const [syncState, setSyncState] = useState<"synced" | "offline" | "unauthorized" | "error">("offline");
+  const unauthorizedSyncTokenRef = useRef<string | null>(null);
 
   // Run central network sync check every 10 seconds
   useEffect(() => {
     const runNetworkSync = async () => {
+      const token = localStorage.getItem("sturgeon_auth_token");
+      if (token && unauthorizedSyncTokenRef.current === token) {
+        setSyncState("unauthorized");
+        return;
+      }
+
       const result = await SturgeonRepository.syncWithServer();
-      setSyncState(result.success ? "synced" : "offline");
+      setSyncState(result.success ? "synced" : result.status || "offline");
+      if (result.status === "unauthorized") {
+        unauthorizedSyncTokenRef.current = token;
+      } else {
+        unauthorizedSyncTokenRef.current = null;
+      }
+
       if (result.success) {
         // Update local React states to match what was returned from server/merged in localStorage
         const savedPools = localStorage.getItem("sturgeon_pools");
@@ -414,8 +525,11 @@ export default function App() {
       const initializeClient = async () => {
         try {
           // Attempt to pull the central server database first to avoid overwriting it
-          const response = await fetch("/api/db/sync");
-          if (response.ok) {
+          const token = localStorage.getItem("sturgeon_auth_token");
+          const response = token
+            ? await fetch("/api/db/sync", { headers: { Authorization: `Bearer ${token}` } })
+            : null;
+          if (response?.ok) {
             const data = await response.json();
             if (data && data.success && data.db) {
               const db = data.db;
@@ -1335,6 +1449,7 @@ export default function App() {
             {/* Mobile close trigger button */}
             <button
               onClick={() => setIsMobileMenuOpen(false)}
+              aria-label={activeTranslations.mobileMenuClose}
               className="p-1 px-1.5 md:hidden hover:bg-natural-khaki rounded-xl text-natural-text transition-colors cursor-pointer border border-natural-border/50"
             >
               <X size={18} />
@@ -1344,7 +1459,7 @@ export default function App() {
           {/* Connected User Badge */}
           <div className="p-3 bg-natural-khaki/50 rounded-2xl border border-natural-border/60 text-xs space-y-2">
             <div>
-              <span className="text-[9px] text-[#2D4A3E]/60 block font-semibold">ناظر مسئول برخط:</span>
+              <span className="text-[9px] text-[#2D4A3E]/60 block font-semibold">{activeTranslations.observer}</span>
               <strong className="text-natural-dark text-[11px] font-bold block truncate mt-0.5" title={currentUser?.name || "مدیر کارگاه"}>
                 {currentUser?.name || "مدیر کارگاه"}
               </strong>
@@ -1356,7 +1471,7 @@ export default function App() {
               className="w-full py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] rounded-xl flex items-center justify-center gap-1.5 transition-all font-black cursor-pointer"
             >
               <LogOut size={11} />
-              خروج از حساب کاربری
+              {activeTranslations.logout}
             </button>
           </div>
 
@@ -1417,17 +1532,22 @@ export default function App() {
           <div className="flex items-center justify-between p-3 bg-white border border-natural-border/65 rounded-2xl text-[10px] font-bold shadow-sm">
             <span className="text-natural-text/70 flex items-center gap-1.5">
               <Server size={12} className="text-natural-forest shrink-0" />
-              شبکه محلی (LAN Sync)
+              {activeTranslations.syncStatus}
             </span>
             {syncState === "synced" ? (
               <span className="text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full text-[9px]">
                 <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-ping"></span>
-                بروز و متصل
+                {activeTranslations.synced}
+              </span>
+            ) : syncState === "unauthorized" ? (
+              <span className="text-amber-700 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full text-[9px]">
+                <span className="w-1.5 h-1.5 bg-amber-600 rounded-full"></span>
+                {activeTranslations.unauthorized}
               </span>
             ) : (
               <span className="text-rose-700 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-full text-[9px]">
                 <span className="w-1.5 h-1.5 bg-rose-600 rounded-full"></span>
-                قطع (آفلاین)
+                {activeTranslations.offline}
               </span>
             )}
           </div>
@@ -1441,7 +1561,7 @@ export default function App() {
           />
 
           {/* Primary Navigation Options */}
-          <nav className="space-y-1" aria-label="منوی اصلی سامانه">
+          <nav className="space-y-1" aria-label={activeTranslations.mainNavLabel}>
             {hasTabPermission("map") && (
               <button
                 onClick={() => { setActiveTab("map"); setIsMobileMenuOpen(false); }}
@@ -1480,9 +1600,9 @@ export default function App() {
                 }`}
               >
                 <PlusCircle size={16} />
-                {language === "fa" ? "ثبت آنی و محاسبات استخر" : language === "ar" ? "التسجيل الفوري والمحاسبة" : "Instant Logger & Dimensions"}
+                {activeTranslations.realtime}
                 <span className="bg-amber-100 text-amber-900 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                  {language === "en" || language === "de" ? "Live" : "سریع"}
+                  {activeTranslations.quick}
                 </span>
               </button>
             )}
@@ -1513,7 +1633,7 @@ export default function App() {
                 <FlaskConical size={16} />
                 {activeTranslations.lab}
                 <span className="bg-emerald-800 text-[#FDFCF8] text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                  {language === "en" || language === "de" ? "New" : "جدید"}
+                  {activeTranslations.new}
                 </span>
               </button>
             )}
@@ -1575,7 +1695,7 @@ export default function App() {
               hasTabPermission("accounting") || 
               hasTabPermission("security") || 
               hasTabPermission("chat")) && (
-              <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-natural-text/40 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right">ادارات و بخش‌های جانبی</div>
+              <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-natural-text/40 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right">{activeTranslations.departments}</div>
             )}
 
             {/* 🌾 FEED MILL */}
@@ -1589,7 +1709,7 @@ export default function App() {
                 }`}
               >
                 <Wheat size={16} />
-                کارخانه خوراک
+                {activeTranslations.feedmill}
               </button>
             )}
 
@@ -1604,7 +1724,7 @@ export default function App() {
                 }`}
               >
                 <Warehouse size={16} />
-                بخش انبارداری
+                {activeTranslations.inventory}
               </button>
             )}
 
@@ -1619,7 +1739,7 @@ export default function App() {
                 }`}
               >
                 <Factory size={16} />
-                کارخانه فراوری
+                {activeTranslations.processing}
               </button>
             )}
 
@@ -1634,7 +1754,7 @@ export default function App() {
                 }`}
               >
                 <Snowflake size={16} />
-                سردخانه مرکزی
+                {activeTranslations.coldstorage}
               </button>
             )}
 
@@ -1649,7 +1769,7 @@ export default function App() {
                 }`}
               >
                 <Cpu size={16} />
-                بخش تأسیسات
+                {activeTranslations.facilities}
               </button>
             )}
 
@@ -1664,7 +1784,7 @@ export default function App() {
                 }`}
               >
                 <Fingerprint size={16} className="text-indigo-500" />
-                زنجیره تأمین و رهگیری
+                {activeTranslations.traceability}
               </button>
             )}
 
@@ -1679,7 +1799,7 @@ export default function App() {
                 }`}
               >
                 <Coins size={16} />
-                حسابداری مالی
+                {activeTranslations.accounting}
               </button>
             )}
 
@@ -1694,7 +1814,7 @@ export default function App() {
                 }`}
               >
                 <Shield size={16} />
-                نگهبانی و حراست
+                {activeTranslations.security}
               </button>
             )}
 
@@ -1709,9 +1829,9 @@ export default function App() {
                 }`}
               >
                 <MessageSquare size={16} className={activeTab === "chat" ? "text-white" : "text-[#8C6A43]"} />
-                سامانه گفتگو و تماس بیسیم
+                {activeTranslations.chat}
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black animate-pulse">
-                  برخط
+                  {activeTranslations.live}
                 </span>
               </button>
             )}
@@ -1726,7 +1846,7 @@ export default function App() {
               }`}
             >
               <FileText size={16} className="text-cyan-400" />
-              گزارش جامع سیستم و معماری (FA)
+              {activeTranslations.report}
               <span className="bg-cyan-500/20 text-cyan-300 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
                 v4.5
               </span>
@@ -1737,7 +1857,7 @@ export default function App() {
               <>
                 <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-red-700/60 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  مدیریت ارشد و تنظیمات عمومی
+                  {activeTranslations.managementSection}
                 </div>
      
                 <button
@@ -1749,10 +1869,10 @@ export default function App() {
                   }`}
                 >
                   <Shield size={16} className={activeTab === "admin" ? "text-white" : "text-red-750"} />
-                  پیکربندی عمومی و کالبدی فارم
+                  {activeTranslations.adminConfig}
                   {currentUser?.role === "admin" && (
                     <span className="bg-red-100 text-red-850 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                      ادمین
+                      {activeTranslations.adminBadge}
                     </span>
                   )}
                 </button>
@@ -1788,36 +1908,18 @@ export default function App() {
               <Waves className="animate-pulse" size={16} />
             </div>
             <div>
-              <span className="text-xs font-black text-natural-dark block leading-none">مزرعه خاویاری فتحی</span>
-              <span className="text-[8px] text-natural-text/50 mt-1 block leading-none">سامانه پایش هوشمند گله‌ها</span>
+              <span className="text-xs font-black text-natural-dark block leading-none">{activeTranslations.farmName}</span>
+              <span className="text-[8px] text-natural-text/50 mt-1 block leading-none">{activeTranslations.subtitle}</span>
             </div>
           </div>
 
           <div className="bg-natural-khaki border border-natural-border/80 px-2.5 py-1 rounded-full text-[9px] font-bold text-natural-dark">
-            {activeTab === "map" && "نقشه استخرها"}
-            {activeTab === "realtime" && "ثبت آنی استخر"}
-            {activeTab === "stats" && "آمار بیوماس"}
-            {activeTab === "feeding" && "محاسبه جیره"}
-            {activeTab === "transfer" && "دفتر جابه‌جایی"}
-            {activeTab === "mortality" && "تلفات مزارع"}
-            {activeTab === "lab" && "آزمایشگاه بیومتر"}
-            {activeTab === "archive" && "بایگانی وقایع"}
-            {activeTab === "facilities" && "بخش تأسیسات"}
-            {activeTab === "processing" && "کارخانه فراوری"}
-            {activeTab === "feedmill" && "کارخانه خوراک"}
-            {activeTab === "inventory" && "بخش انبارداری"}
-            {activeTab === "accounting" && "حسابداری مالی"}
-            {activeTab === "security" && "نگهبانی و حراست"}
-            {activeTab === "coldstorage" && "سردخانه کارگاه"}
-            {activeTab === "traceability" && "زنجیره تأمین و رهگیری"}
-            {activeTab === "admin" && "مدیریت زیرساخت"}
-            {activeTab === "settings" && "تنظیمات عمومی"}
-            {activeTab === "chat" && "بیسیم و گفتگو"}
-            {activeTab === "report" && "گزارش سیستم"}
+            {activeTabTitle}
           </div>
 
           <button
             onClick={() => setIsMobileMenuOpen(true)}
+            aria-label={activeTranslations.mobileMenuOpen}
             className="p-1 px-1.5 bg-natural-khaki text-natural-dark hover:bg-natural-khaki/80 rounded-xl transition-all cursor-pointer border border-natural-border/70"
           >
             <Menu size={18} />
@@ -1829,31 +1931,14 @@ export default function App() {
           <div className="flex justify-between items-center bg-white border border-natural-border rounded-3xl p-5 shadow-sm">
             <div>
               <div className="flex items-center gap-2 text-[10px] text-natural-earth font-black select-none">
-                <span>پایگاه اطلاعاتی مزرعه خاویاری فتحی</span>
+                <span>{activeTranslations.farmDatabase}</span>
                 <span>•</span>
-                <span className="text-emerald-700 animate-pulse">سیستم برخط و متصل</span>
+              <span className={syncState === "synced" ? "text-emerald-700 animate-pulse" : "text-rose-700"}>
+                {syncState === "synced" ? activeTranslations.onlineConnected : syncState === "unauthorized" ? activeTranslations.unauthorized : activeTranslations.localMode}
+              </span>
               </div>
               <h2 className="text-lg font-black text-natural-dark font-sans mt-1">
-                {activeTab === "map" && "نقشه سالن‌ها و استخرها"}
-                {activeTab === "realtime" && "برگه ثبت آنی وقایع، خوراک‌دهی، تبارشناسی و ابعاد هیدرولیک استخر"}
-                {activeTab === "stats" && "جدول بیوماس و آمار کلی فارم خاویاری"}
-                {activeTab === "feeding" && "محاسبه علمی جیره غذایی روزانه گله (FCR)"}
-                {activeTab === "transfer" && "دفتر ثبت انتقالات تبارشناسی و ردیابی جابجایی تانک ها"}
-                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی فوق هوشمند با تکنولوژی [Gemini]"}
-                {activeTab === "lab" && "آزمایشگاه تخصصی کنترل کیفی هیدروشیمی و سونوگرافی جنسی"}
-                {activeTab === "archive" && "دفتر بایگانی کارگاهی، گزارش‌های آزمایشگاه و کارتابل وقایع"}
-                {activeTab === "facilities" && "سامانه مانیتورینگ تأسیسات زیربنایی و تصفیه‌خانه مرکزی آب"}
-                {activeTab === "processing" && "سیستم فرآوری، صید، نمک‌سود کاری و بسته‌بندی خاویار صادراتی"}
-                {activeTab === "feedmill" && "خط تولید خوراک متراکم، کالیبراسیون اکسترودر و آنالیز فیزیکی پلت"}
-                {activeTab === "inventory" && "مدیریت کاردکس کالا، موجودی انبار مرکزی و حواله‌های فیزیکی"}
-                {activeTab === "accounting" && "دفتر روزنامه حسابداری، تراز مالی و بهای تمام‌شده بیوماس شناور"}
-                {activeTab === "security" && "سامانه دژبانی حراست، ثبت تردد گیت اصلی و حصار الکترومغناطیسی"}
-                {activeTab === "coldstorage" && "پایش هوشمند دمای یخچال‌ها، فریزرها و مدیریت کاردکس سردخانه"}
-                {activeTab === "traceability" && "رهگیری زنده کالا از بدو ورود، تولید خوراک، دوزهای تغذیه تا فرآوری، انجماد و فروش"}
-                {activeTab === "admin" && "پنل دسترسی ارشد مدیریت و پیکربندی توسعه کالبدی مزارع"}
-                {activeTab === "settings" && "تنظیمات عمومی، برندینگ شیلات و پیکربندی آستانه‌های اکولوژیک"}
-                {activeTab === "chat" && "سامانه درون‌کارگاهی گفتگو، ارسال فایل، ضبط صدا و تماس‌های صوتی/تصویری بیسیم"}
-                {activeTab === "report" && "گزارش جامع معماری، قابلیت‌ها و سند سیستم FATHI AQUA SUPER ERP"}
+                {activeTabTitle}
               </h2>
             </div>
 
