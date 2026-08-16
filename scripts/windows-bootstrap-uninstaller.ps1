@@ -1,4 +1,4 @@
-param([string]$InstallPath = (Join-Path $env:LOCALAPPDATA 'FathiAquaSuperERP'), [switch]$PurgeData)
+param([string]$InstallPath = (Join-Path $env:LOCALAPPDATA 'FathiAquaSuperERP'), [switch]$PurgeData, [switch]$Force)
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $InstallPath)) { Write-Host 'Installation not found.'; exit 0 }
 $storedLanguage = $null
@@ -14,7 +14,8 @@ $confirm = @{
   ar = 'إزالة Fathi Aqua ERP؟ (Y/N)'; de = 'Fathi Aqua ERP entfernen? (J/N)'
 }
 $prompt = if ($confirm.ContainsKey($lang)) { $confirm[$lang] } else { $confirm.en }
-$answer = Read-Host $prompt; if ($answer -notmatch '^(y|yes|j|ja|بله|نعم)$') { exit 0 }
+$answer = if ($Force) { 'y' } else { Read-Host $prompt }
+if ($answer -notmatch '^(y|yes|j|ja|بله|نعم)$') { exit 0 }
 $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Fathi Aqua ERP.lnk'
 if (Test-Path $desktop) { Remove-Item -LiteralPath $desktop -Force }
 if ($PurgeData) { Remove-Item -LiteralPath (Join-Path $InstallPath 'data') -Recurse -Force -ErrorAction SilentlyContinue }
