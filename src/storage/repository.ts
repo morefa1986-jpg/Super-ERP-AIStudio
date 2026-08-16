@@ -352,7 +352,7 @@ export const SturgeonRepository = {
   },
 
   // --- CENTRALIZED NETWORK SYNC (FOR SHARED MULTI-USER LOCAL LAN STORAGE) ---
-  async syncWithServer(): Promise<{ success: boolean; lastSynced?: string; error?: string }> {
+  async syncWithServer(): Promise<{ success: boolean; lastSynced?: string; error?: string; status?: "synced" | "offline" | "unauthorized" | "error" }> {
     try {
       const keysToSync = [
         "sturgeon_pools_v2",
@@ -382,12 +382,13 @@ export const SturgeonRepository = {
       });
 
       const token = localStorage.getItem("sturgeon_auth_token");
+      if (!token) {
+        return { success: false, status: "unauthorized", error: "توکن ورود وجود ندارد؛ برای همگام‌سازی دوباره وارد شوید." };
+      }
       const headers: Record<string, string> = {
         "Content-Type": "application/json"
       };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      headers["Authorization"] = `Bearer ${token}`;
 
       const response = await fetch(getApiUrl("/api/db/sync"), {
         method: "POST",
@@ -396,6 +397,9 @@ export const SturgeonRepository = {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          return { success: false, status: "unauthorized", error: "نشست ورود منقضی شده یا معتبر نیست." };
+        }
         throw new Error(`HTTP ${response.status}`);
       }
 
@@ -409,12 +413,12 @@ export const SturgeonRepository = {
         });
         // Clear pending offline queue after successful server sync
         this.clearPendingQueue();
-        return { success: true, lastSynced: db.lastSyncedAt };
+        return { success: true, status: "synced", lastSynced: db.lastSyncedAt };
       }
-      return { success: false, error: "ساختار پاسخ نامعتبر از سرور" };
+      return { success: false, status: "error", error: "ساختار پاسخ نامعتبر از سرور" };
     } catch (err: any) {
       console.warn("Local Network Sync failed (using offline mode):", err.message);
-      return { success: false, error: err.message };
+      return { success: false, status: "offline", error: err.message };
     }
   }
 };

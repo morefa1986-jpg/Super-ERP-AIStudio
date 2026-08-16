@@ -6,7 +6,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Pool, Hall, SturgeonBreed } from "../types";
-import { formatWaterParam, calculatePoolVolumeDetails } from "../utils/aquacultureUtils";
+import { formatRequiredSensorParam, formatRequiredSensorParamWithUnit, formatWaterParam, calculatePoolVolumeDetails, evaluateFeedingWaterSafety } from "../utils/aquacultureUtils";
 import { 
   Waves, 
   Layers, 
@@ -38,6 +38,7 @@ export const HallMap: React.FC<HallMapProps> = ({
   // Helper for status colors based on oxygen / temperature
   const getStatusColorClass = (pool: Pool) => {
     if (pool.count === 0) return "bg-[#FDFCF8]/40 hover:bg-natural-khaki/30 text-natural-text/40 border-natural-border border-dashed border";
+    if (!evaluateFeedingWaterSafety(pool).isDataValid) return "bg-[#FDFCF8] hover:bg-natural-clay/5 text-natural-clay border-natural-clay/80 border-[3px] ring-2 ring-natural-clay/20 shadow-sm";
     if (pool.oxygenLevel < 4 || pool.temperature > 22) return "bg-[#FDFCF8] hover:bg-natural-clay/5 text-natural-clay border-natural-clay/80 border-[3px] ring-2 ring-natural-clay/20 shadow-sm";
     if (pool.oxygenLevel < 5.5 || pool.temperature > 19) return "bg-[#FDFCF8] hover:bg-natural-earth/5 text-natural-earth border-natural-earth border-[3px] border-t-natural-clay shadow-sm";
     return "bg-white hover:bg-natural-forest/5 text-natural-forest border-natural-forest border-2 shadow-sm";
@@ -45,6 +46,7 @@ export const HallMap: React.FC<HallMapProps> = ({
 
   const getStatusLabel = (pool: Pool) => {
     if (pool.count === 0) return "خالی";
+    if (!evaluateFeedingWaterSafety(pool).isDataValid) return "داده آب نامعتبر";
     if (pool.oxygenLevel < 4) return "کمبود حیاتی اکسیژن";
     if (pool.oxygenLevel < 5.5) return "اکسیژن لب‌مرز";
     if (pool.temperature > 20) return "دمای بالا";
@@ -695,7 +697,7 @@ export const HallMap: React.FC<HallMapProps> = ({
                         <Thermometer size={12} />
                         <span className="text-[9px] font-sans">دما</span>
                       </div>
-                      <span className="text-xs font-bold text-natural-dark font-mono">{formatWaterParam(activePool.temperature)}°C</span>
+                      <span className="text-xs font-bold text-natural-dark font-mono">{formatRequiredSensorParamWithUnit(activePool.temperature, "°C")}</span>
                     </div>
 
                     <div className="bg-natural-khaki/30 border border-natural-border/30 p-2 rounded-xl text-center">
@@ -703,7 +705,7 @@ export const HallMap: React.FC<HallMapProps> = ({
                         <Droplets size={12} />
                         <span className="text-[9px] font-sans">اکسیژن</span>
                       </div>
-                      <span className="text-xs font-bold text-natural-dark font-mono">{formatWaterParam(activePool.oxygenLevel)} ppm</span>
+                      <span className="text-xs font-bold text-natural-dark font-mono">{formatRequiredSensorParamWithUnit(activePool.oxygenLevel, " ppm")}</span>
                     </div>
 
                     <div className="bg-natural-khaki/30 border border-natural-border/30 p-2 rounded-xl text-center">
@@ -711,7 +713,7 @@ export const HallMap: React.FC<HallMapProps> = ({
                         <Activity size={12} />
                         <span className="text-[9px] font-sans">pH آب</span>
                       </div>
-                      <span className="text-xs font-bold text-natural-dark font-mono">{formatWaterParam(activePool.phLevel)}</span>
+                      <span className="text-xs font-bold text-natural-dark font-mono">{formatRequiredSensorParam(activePool.phLevel)}</span>
                     </div>
                   </div>
                 </div>
@@ -722,10 +724,14 @@ export const HallMap: React.FC<HallMapProps> = ({
                   <Info size={14} className="text-natural-earth" />
                   برآورد تعذیه روز فردا:
                 </div>
-                {activePool.count > 0 ? (
+                {activePool.count > 0 && evaluateFeedingWaterSafety(activePool).canFeed ? (
                   <p className="leading-relaxed text-natural-text/90">
                     با احتساب بیوماس استخر و دمای {formatWaterParam(activePool.temperature)} درجه، دوز غذای بهینه فردا برابر با{" "}
                     <strong className="text-natural-forest font-mono">{(activePool.totalBiomassKg * 0.012).toFixed(1)} kg</strong> (بازه ۱.۲٪ بیوماس) پیشنهاد می‌شود.
+                  </p>
+                ) : activePool.count > 0 ? (
+                  <p className="text-natural-clay font-bold leading-relaxed">
+                    برآورد خوراک قفل است: {evaluateFeedingWaterSafety(activePool).reasons.join(" ")}
                   </p>
                 ) : (
                   <p className="text-natural-text/60">استخر خالی است و فرآیند خوراک‌دهی معلق است.</p>

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SturgeonRepository } from "../storage/repository";
 import { Wifi, WifiOff, RefreshCw, CheckCircle2, CloudUpload, AlertTriangle, X } from "lucide-react";
 
@@ -13,21 +13,33 @@ interface OfflineSyncIndicatorProps {
 
 export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDataSynced }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [serverStatus, setServerStatus] = useState<"synced" | "syncing" | "offline" | "unauthorized" | "error">("offline");
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showToast, setShowToast] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>("");
   const [toastType, setToastType] = useState<"success" | "warning" | "offline">("success");
+  const serverStatusRef = useRef(serverStatus);
+
+  useEffect(() => {
+    serverStatusRef.current = serverStatus;
+  }, [serverStatus]);
 
   const checkPendingAndSync = async (autoTrigger: boolean = false) => {
     const queue = SturgeonRepository.getPendingQueue();
     setPendingCount(queue.length);
 
+    if (!autoTrigger && serverStatusRef.current === "unauthorized") {
+      return;
+    }
+
     if (navigator.onLine) {
-      if (queue.length > 0 || autoTrigger) {
+      if (queue.length > 0 || autoTrigger || serverStatusRef.current !== "synced") {
         setIsSyncing(true);
+        setServerStatus("syncing");
         const result = await SturgeonRepository.syncWithServer();
         setIsSyncing(false);
+        setServerStatus(result.success ? "synced" : result.status || "offline");
 
         if (result.success) {
           const syncedCount = queue.length;
@@ -40,12 +52,17 @@ export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDa
           }
           if (onDataSynced) onDataSynced();
         } else {
-          setToastMessage("خطا در ارسال داده‌ها به سرور. اطلاعات در حافظه محلی محفوظ است.");
+          setToastMessage(result.status === "unauthorized"
+            ? "نشست ورود برای همگام‌سازی معتبر نیست. خروج و ورود مجدد لازم است."
+            : "خطا در ارسال داده‌ها به سرور. اطلاعات در حافظه محلی محفوظ است."
+          );
           setToastType("warning");
           setShowToast(true);
           setTimeout(() => setShowToast(false), 5000);
         }
       }
+    } else {
+      setServerStatus("offline");
     }
   };
 
@@ -74,7 +91,7 @@ export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDa
       const queue = SturgeonRepository.getPendingQueue();
       setPendingCount(queue.length);
       setIsOnline(navigator.onLine);
-      if (navigator.onLine && queue.length > 0 && !isSyncing) {
+      if (navigator.onLine && !isSyncing && serverStatusRef.current !== "unauthorized") {
         checkPendingAndSync();
       }
     }, 8000);
@@ -109,6 +126,7 @@ export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDa
 
             <button 
               onClick={() => setShowToast(false)}
+              aria-label="بستن پیام همگام‌سازی"
               className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
               <X size={14} />
@@ -119,20 +137,26 @@ export const OfflineSyncIndicator: React.FC<OfflineSyncIndicatorProps> = ({ onDa
 
       {/* HEADER CONNECTION STATUS BADGE */}
       <div className="flex items-center gap-2">
-        {!isOnline ? (
-          <div 
+        {!isOnline || serverStatus === "offline" || serverStatus === "error" || serverStatus === "unauthorized" ? (
+          <button
+            type="button"
             onClick={() => checkPendingAndSync(true)}
-            className="px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-2xl text-[10px] font-bold flex items-center gap-1.5 cursor-pointer hover:bg-amber-500/25 transition-all shadow-xs"
-            title="کلیک جهت امتحان مجدد همگام‌سازی با سرور"
+            aria-label={serverStatus === "unauthorized" ? "تلاش مجدد پس از ورود برای همگام‌سازی" : "تلاش مجدد برای همگام‌سازی با سرور"}
+            className={`px-3 py-1.5 rounded-2xl text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${
+              serverStatus === "unauthorized"
+                ? "bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500/25"
+                : "bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25"
+            }`}
+            title={serverStatus === "unauthorized" ? "ورود مجدد برای همگام‌سازی لازم است" : "کلیک جهت امتحان مجدد همگام‌سازی با سرور"}
           >
-            <WifiOff size={12} className="text-amber-400 animate-pulse" />
-            <span>آفلاین (ذخیره محلی)</span>
+            <WifiOff size={12} className="animate-pulse" />
+            <span>{serverStatus === "unauthorized" ? "ورود مجدد لازم است" : "آفلاین (ذخیره محلی)"}</span>
             {pendingCount > 0 && (
               <span className="px-1.5 py-0.2 bg-amber-500 text-slate-950 font-mono text-[9px] font-black rounded-full">
                 {pendingCount} در صف
               </span>
             )}
-          </div>
+          </button>
         ) : pendingCount > 0 ? (
           <button
             onClick={() => checkPendingAndSync(true)}

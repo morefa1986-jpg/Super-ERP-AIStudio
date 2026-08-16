@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertTriangle, Bell, BellOff, Volume2, VolumeX, ShieldAlert, Zap, CheckCircle, RefreshCw, X, ArrowUpRight } from "lucide-react";
 import { Pool } from "../types";
+import { evaluateFeedingWaterSafety } from "../utils/aquacultureUtils";
 
 interface IoTSensorAlertsProps {
   pools: Pool[];
@@ -32,7 +33,7 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
 }) => {
   const [alerts, setAlerts] = useState<IoTAlert[]>([]);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
-  const [isSimulatorActive, setIsSimulatorActive] = useState(true);
+  const [isSimulatorActive, setIsSimulatorActive] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   // Sound generator using Web Audio API
@@ -71,7 +72,22 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
     const activeAlerts: IoTAlert[] = [];
     pools.forEach((p) => {
       if (p.count > 0) {
-        if (p.oxygenLevel < 4.5) {
+        const waterSafety = evaluateFeedingWaterSafety(p);
+        if (!waterSafety.isDataValid) {
+          activeAlerts.push({
+            id: `alert-data-${p.id}`,
+            poolId: p.id,
+            poolName: p.name,
+            hallId: p.hallId,
+            paramName: "اکسیژن محلول",
+            value: p.oxygenLevel,
+            unit: "mg/L",
+            threshold: "داده معتبر دما/اکسیژن/pH ثبت نشده",
+            severity: "critical",
+            timestamp: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }),
+            acknowledged: false,
+          });
+        } else if (p.oxygenLevel < 4.5) {
           activeAlerts.push({
             id: `alert-ox-${p.id}`,
             poolId: p.id,
@@ -101,7 +117,7 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
     const interval = setInterval(() => {
       // 15% chance to simulate a sudden sensor event
       if (Math.random() < 0.25) {
-        const activePools = pools.filter((p) => p.count > 0);
+        const activePools = pools.filter((p) => p.count > 0 && evaluateFeedingWaterSafety(p).isDataValid);
         if (activePools.length === 0) return;
 
         const randomPool = activePools[Math.floor(Math.random() * activePools.length)];
@@ -199,6 +215,7 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
             </button>
             <button
               onClick={() => setIsSoundMuted(!isSoundMuted)}
+              aria-label={isSoundMuted ? "وصل صدای آلارم" : "قطع صدای آلارم"}
               className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700 cursor-pointer"
               title={isSoundMuted ? "وصل صدای آلارم" : "قطع صدای آلارم"}
             >
@@ -220,7 +237,7 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             </div>
             <p className="text-[10px] text-slate-400">
-              ارسال زنده پارامترهای اکسیژن، دما و pH به کلود فارم فتحی
+              نمایش داده‌های ثبت‌شده دما، اکسیژن و pH؛ شبیه‌ساز فقط برای تست دستی فعال می‌شود
             </p>
           </div>
         </div>
@@ -241,7 +258,7 @@ export const IoTSensorAlerts: React.FC<IoTSensorAlertsProps> = ({
                 : "bg-slate-800 text-slate-400 border-slate-700"
             }`}
           >
-            {isSimulatorActive ? "شبیه‌ساز فعال" : "شبیه‌ساز متوقف"}
+            {isSimulatorActive ? "شبیه‌ساز تست فعال" : "شبیه‌ساز تست خاموش"}
           </button>
         </div>
       </div>

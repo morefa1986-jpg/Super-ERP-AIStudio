@@ -25,6 +25,7 @@ import {
   QrCode
 } from "lucide-react";
 import { Pool, SturgeonBreed, FeedingMeal, MovementLog, MortalityLog, WaterTestLog, SonographyLog } from "../types";
+import { evaluateFeedingWaterSafety } from "../utils/aquacultureUtils";
 
 interface PoolQuickLoggerProps {
   pools: Pool[];
@@ -244,6 +245,8 @@ export default function PoolQuickLogger({
     const val = parseFloat(feedKg);
     return isNaN(val) ? 0 : val * 1000;
   }, [feedKg]);
+  const feedingWaterSafety = useMemo(() => evaluateFeedingWaterSafety(activePool), [activePool]);
+  const feedingLocked = deprivationActive || !feedingWaterSafety.canFeed;
 
   // cups calculation
   const cups250g = useMemo(() => {
@@ -294,7 +297,7 @@ export default function PoolQuickLogger({
   // Since fish grows incrementally every day, expected daily growth can be projected.
   const fcrEstimate = useMemo(() => {
     const feedInputKg = parseFloat(feedKg);
-    if (!activePool || isNaN(feedInputKg) || feedInputKg <= 0 || activePool.count === 0) return null;
+    if (feedingLocked || !activePool || isNaN(feedInputKg) || feedInputKg <= 0 || activePool.count === 0) return null;
 
     const biomassKg = activePool.totalBiomassKg > 0 ? activePool.totalBiomassKg : (activePool.count * activePool.avgWeightGrams) / 1000;
     
@@ -306,12 +309,12 @@ export default function PoolQuickLogger({
     const eatenKg = feedInputKg * (eatenPct / 100);
     const calculatedFcr = eatenKg / expectedGainKg;
     return calculatedFcr;
-  }, [activePool, feedKg, gottenPct => eatenPct, herdGrowthRate]);
+  }, [activePool, feedKg, eatenPct, herdGrowthRate, feedingLocked]);
 
   // NEXT MEAL SIZE PROJECTOR
   const nextMealProjectedKg = useMemo(() => {
     const feedInputKg = parseFloat(feedKg);
-    if (deprivationActive || isNaN(feedInputKg) || feedInputKg <= 0) return 0;
+    if (feedingLocked || isNaN(feedInputKg) || feedInputKg <= 0) return 0;
     
     let base = feedInputKg * (eatenPct / 100);
     let tempMultiplier = 1.0;
@@ -339,7 +342,7 @@ export default function PoolQuickLogger({
     }
 
     return parseFloat((base * appetiteMultiplier * tempMultiplier).toFixed(2));
-  }, [feedKg, eatenPct, deprivationActive, activePool]);
+  }, [feedKg, eatenPct, feedingLocked, activePool]);
 
   // ------------------------------------------------------------------------
   // SUBMISSIONS
@@ -570,8 +573,11 @@ export default function PoolQuickLogger({
     if (!activePool) return;
     clearFormStates();
 
-    if (deprivationActive) {
-      setErrorMsg("این استخر به دلیل دستور دامپزشکی در وضعیت 'قطع غذا' قفل است. ابتدا سوئیچ قطع غذا را خاموش کنید.");
+    if (feedingLocked) {
+      setErrorMsg(deprivationActive
+        ? "این استخر به دلیل دستور دامپزشکی در وضعیت 'قطع غذا' قفل است. ابتدا سوئیچ قطع غذا را خاموش کنید."
+        : `ثبت خوراک قفل شد: ${feedingWaterSafety.reasons.join(" ")}`
+      );
       return;
     }
 
@@ -1397,11 +1403,11 @@ export default function PoolQuickLogger({
             {/* 🍽️ CARD 3: REAL-TIME FEED CALCULATIONS WITH CONVERSION UNITS */}
             <div className="bg-white rounded-3xl border border-natural-border shadow-sm p-6 space-y-4 relative">
               
-              {/* DEPRIVATION WATERMARK OVERLAY */}
-              {deprivationActive && (
+              {/* Feeding safety overlay */}
+              {feedingLocked && (
                 <div className="absolute top-4 left-4 bg-[#A65D50] text-[#FAF9F5] text-[9.5px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse select-none">
                   <Slash size={12} />
-                  وضعیت روزه‌داری / قطع خوراک فعال است
+                  {deprivationActive ? "وضعیت روزه‌داری / قطع خوراک فعال است" : "قفل ایمنی تغذیه فعال است"}
                 </div>
               )}
 
@@ -1419,7 +1425,7 @@ export default function PoolQuickLogger({
                 {/* Interactive Nursery Toggle Option */}
                 <button
                   type="button"
-                  disabled={deprivationActive}
+                  disabled={feedingLocked}
                   onClick={() => setNurseryEnabled(!nurseryEnabled)}
                   className={`px-3 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer select-none disabled:opacity-40 ${
                     nurseryEnabled 
@@ -1431,6 +1437,12 @@ export default function PoolQuickLogger({
                   پروتکل تغذیه اختصاصی نرسری
                 </button>
               </div>
+
+              {!deprivationActive && !feedingWaterSafety.canFeed && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-[10.5px] font-bold text-rose-800 leading-relaxed">
+                  ثبت خوراک و محاسبه وعده بعدی قفل شد: {feedingWaterSafety.reasons.join(" ")}
+                </div>
+              )}
 
               {nurseryEnabled ? (
                 <div className="space-y-4 anim-fade-in">
@@ -1454,7 +1466,7 @@ export default function PoolQuickLogger({
                           تعداد دفعات خوراک‌دهی در ۲۴ ساعت (حداکثر ۶ وعده):
                         </label>
                         <select
-                          disabled={deprivationActive}
+                          disabled={feedingLocked}
                           value={nurseryMealsCount}
                           onChange={(e) => setNurseryMealsCount(parseInt(e.target.value))}
                           className="w-full text-xs font-bold font-sans rounded-xl border border-natural-border p-2 bg-[#FDFCF8] text-natural-dark focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-500/20 cursor-pointer"
@@ -1491,7 +1503,7 @@ export default function PoolQuickLogger({
                               </span>
                               
                               <select
-                                disabled={deprivationActive}
+                                disabled={feedingLocked}
                                 value={nurserySchedule[slot.time] || "❌ قطع موقت تغذیه"}
                                 onChange={(e) => {
                                   setNurserySchedule(prev => ({
@@ -1521,7 +1533,7 @@ export default function PoolQuickLogger({
                             </span>
                             <input
                               type="text"
-                              disabled={deprivationActive}
+                              disabled={feedingLocked}
                               value={nurserySchedule["08:00"] || ""}
                               placeholder="مثال: ویتامینه و اسیدآمینه نرسری"
                               onChange={(e) => {
@@ -1541,7 +1553,7 @@ export default function PoolQuickLogger({
                             </span>
                             <input
                               type="text"
-                              disabled={deprivationActive}
+                              disabled={feedingLocked}
                               value={nurserySchedule["20:00"] || ""}
                               placeholder="مثال: حمام نمک ضد قارچ"
                               onChange={(e) => {
@@ -1577,7 +1589,7 @@ export default function PoolQuickLogger({
                           <input
                             type="number"
                             min="0"
-                            disabled={deprivationActive}
+                            disabled={feedingLocked}
                             value={nurseryEggCount}
                             onChange={(e) => setNurseryEggCount(e.target.value)}
                             className="w-full text-xs font-bold rounded-xl border border-natural-border p-2 bg-white text-natural-dark text-left font-mono focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
@@ -1627,7 +1639,7 @@ export default function PoolQuickLogger({
                             type="number"
                             step="0.01"
                             min="0"
-                            disabled={deprivationActive}
+                            disabled={feedingLocked}
                             value={nurseryDryFeedKg}
                             onChange={(e) => setNurseryDryFeedKg(e.target.value)}
                             className="w-full text-xs font-bold rounded-xl border border-natural-border p-2 bg-white text-natural-dark text-left font-mono"
@@ -1637,7 +1649,7 @@ export default function PoolQuickLogger({
                         </div>
                         <button
                           type="button"
-                          disabled={deprivationActive}
+                          disabled={feedingLocked}
                           onClick={() => {
                             const list = pools.filter(p => p.hallId === activePool?.hallId);
                             const sumBiomass = list.reduce((acc, p) => acc + (p.totalBiomassKg || 0), 0);
@@ -1662,7 +1674,7 @@ export default function PoolQuickLogger({
                           <input
                             type="number"
                             min="0"
-                            disabled={deprivationActive}
+                            disabled={feedingLocked}
                             value={nurseryDaphniaPacks}
                             onChange={(e) => setNurseryDaphniaPacks(e.target.value)}
                             className="w-full text-xs font-bold rounded-xl border border-natural-border p-2 bg-white text-natural-dark text-left font-mono"
@@ -1688,7 +1700,7 @@ export default function PoolQuickLogger({
                             <span className="text-[9px] text-rose-950 block font-bold mb-1">تایپ دستی دارو / مکمل انتخابی:</span>
                             <input
                               type="text"
-                              disabled={deprivationActive}
+                              disabled={feedingLocked}
                               value={nurseryMedType}
                               placeholder="مثال: ویتامین C، فلورفنیکول، پروبیوتیک فعال..."
                               onChange={(e) => setNurseryMedType(e.target.value)}
@@ -1702,7 +1714,7 @@ export default function PoolQuickLogger({
                               <input
                                 type="number"
                                 min="0"
-                                disabled={deprivationActive}
+                                disabled={feedingLocked}
                                 value={nurseryMedDoseSec}
                                 onChange={(e) => setNurseryMedDoseSec(e.target.value)}
                                 className="w-full text-xs font-bold rounded-xl border border-rose-200/70 p-2 bg-white text-natural-dark text-left font-mono"
@@ -1730,7 +1742,7 @@ export default function PoolQuickLogger({
                       <input
                         type="number"
                         step="0.1"
-                        disabled={deprivationActive}
+                        disabled={feedingLocked}
                         value={feedKg}
                         onChange={(e) => setFeedKg(e.target.value)}
                         className="w-full text-xs font-sans rounded-xl border border-natural-border p-2.5 bg-[#FDFCF8] text-natural-dark focus:outline-none focus:border-natural-earth text-right font-mono disabled:opacity-40"
@@ -1742,7 +1754,7 @@ export default function PoolQuickLogger({
                       <div>
                         <span className="text-[9.5px] text-natural-text/60 block font-semibold mb-1">نوع فرمول غذایی:</span>
                         <select
-                          disabled={deprivationActive}
+                          disabled={feedingLocked}
                           value={feedType}
                           onChange={(e) => setFeedType(e.target.value)}
                           className="w-full text-[10.5px] font-sans rounded-xl border border-natural-border p-2 bg-[#FDFCF8] text-natural-dark focus:outline-none"
@@ -1761,7 +1773,7 @@ export default function PoolQuickLogger({
                           type="range"
                           min="50"
                           max="100"
-                          disabled={deprivationActive}
+                          disabled={feedingLocked}
                           value={eatenPct}
                           onChange={(e) => setEatenPct(parseInt(e.target.value))}
                           className="w-full text-xs cursor-pointer h-1 bg-natural-border rounded-lg appearance-none mt-4"
@@ -1796,7 +1808,7 @@ export default function PoolQuickLogger({
                       <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-xs">
                         <span className="text-[8.5px] text-natural-text/70 block">پیمانه ۲۵۰ گرمی</span>
                         <strong className="text-lg font-black text-emerald-800 block mt-1 font-mono">
-                          {deprivationActive ? 0 : cups250g.toFixed(1)}
+                          {feedingLocked ? 0 : cups250g.toFixed(1)}
                         </strong>
                         <span className="text-[8px] text-natural-text/50">تعداد پیمانه ریز</span>
                       </div>
@@ -1804,7 +1816,7 @@ export default function PoolQuickLogger({
                       <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-xs">
                         <span className="text-[8.5px] text-natural-text/70 block">پیمانه ۵۰۰ گرمی</span>
                         <strong className="text-lg font-black text-emerald-800 block mt-1 font-mono">
-                          {deprivationActive ? 0 : cups500g.toFixed(1)}
+                          {feedingLocked ? 0 : cups500g.toFixed(1)}
                         </strong>
                         <span className="text-[8px] text-natural-text/50">تعداد پیمانه درشت</span>
                       </div>
@@ -1815,7 +1827,7 @@ export default function PoolQuickLogger({
                       <div className="flex justify-between items-center text-[#2D4A3E] font-medium leading-normal bg-white/50 p-2 rounded-lg">
                         <span>تخمین ضریب تبدیل غذایی (FCR):</span>
                         <strong className="font-bold text-natural-dark text-[11px] font-mono">
-                          {deprivationActive ? "0.0" : fcrEstimate ? fcrEstimate.toFixed(2) : "نیاز به خوراک"}
+                          {feedingLocked ? "0.0" : fcrEstimate ? fcrEstimate.toFixed(2) : "نیاز به خوراک"}
                         </strong>
                       </div>
 
@@ -1835,7 +1847,7 @@ export default function PoolQuickLogger({
               {/* SAVE DAILY MEALS */}
               <button
                 onClick={handleSaveFeeding}
-                disabled={deprivationActive}
+                disabled={feedingLocked}
                 className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs rounded-xl font-bold cursor-pointer transition-all disabled:opacity-40"
               >
                 {nurseryEnabled ? "ثبت پروتکل جیره ترکیبی ده‌گانه نرسری" : "ثبت وعده غذایی و ارتقاء بایگانی تغذیه"}

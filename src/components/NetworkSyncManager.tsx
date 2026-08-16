@@ -18,7 +18,7 @@ interface NetworkSyncManagerProps {
 }
 
 export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncComplete }) => {
-  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "offline">("synced");
+  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "offline" | "unauthorized" | "error">("offline");
   const [lastSynced, setLastSynced] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [localIp, setLocalIp] = useState<string>("در حال دریافت...");
@@ -57,7 +57,7 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
         onSyncComplete();
       }
     } else {
-      setSyncStatus("offline");
+      setSyncStatus(result.status === "unauthorized" ? "unauthorized" : result.status === "error" ? "error" : "offline");
       setErrorMessage(result.error || "خطای ارتباط با سرور مرکزی");
     }
   };
@@ -106,7 +106,7 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
           <div className={`p-2 rounded-xl ${
             syncStatus === "synced" ? "bg-emerald-50 text-emerald-700" :
             syncStatus === "syncing" ? "bg-amber-50 text-amber-700 animate-pulse" :
-            "bg-rose-50 text-rose-700"
+            syncStatus === "unauthorized" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
           }`}>
             <Server size={18} />
           </div>
@@ -134,6 +134,18 @@ export const NetworkSyncManager: React.FC<NetworkSyncManagerProps> = ({ onSyncCo
             <span className="inline-flex items-center gap-1 py-1 px-2.5 bg-rose-50 text-rose-700 text-[10px] font-bold rounded-full">
               <WifiOff size={10} />
               آفلاین (ذخیره محلی)
+            </span>
+          )}
+          {syncStatus === "unauthorized" && (
+            <span className="inline-flex items-center gap-1 py-1 px-2.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full">
+              <WifiOff size={10} />
+              ورود مجدد لازم است
+            </span>
+          )}
+          {syncStatus === "error" && (
+            <span className="inline-flex items-center gap-1 py-1 px-2.5 bg-rose-50 text-rose-700 text-[10px] font-bold rounded-full">
+              <WifiOff size={10} />
+              خطای همگام‌سازی
             </span>
           )}
 
