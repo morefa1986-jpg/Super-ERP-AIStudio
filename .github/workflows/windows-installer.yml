@@ -1,6 +1,8 @@
 name: Windows Installer
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 jobs:
@@ -46,9 +48,9 @@ jobs:
         shell: pwsh
         run: |
           $testPath = Join-Path $env:RUNNER_TEMP 'FathiAquaERP-TestInstall'
-          "${testPath}" | .\windows-bootstrap-installer.ps1 -Package "${{ github.workspace }}\FathiAquaSuperERP-package.zip" -NoShortcut
+          .\windows-bootstrap-installer.ps1 -Package "${{ github.workspace }}\FathiAquaSuperERP-package.zip" -InstallPath $testPath -NoShortcut
           if (-not (Test-Path (Join-Path $testPath 'server.cjs'))) { throw 'Installer did not copy server bundle.' }
-          'Y' | .\scripts\windows-bootstrap-uninstaller.ps1 -InstallPath $testPath
+          .\scripts\windows-bootstrap-uninstaller.ps1 -InstallPath $testPath -Force
           if (Test-Path $testPath) { throw 'Uninstaller did not remove test installation.' }
       - uses: actions/upload-artifact@v4
         with:
