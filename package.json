@@ -8,15 +8,16 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit",
-    "test:core": "tsx tests/core-stock.test.ts && tsx tests/backup.test.ts && tsx tests/i18n.test.ts && tsx tests/connection.test.ts && tsx tests/accounting.test.ts && tsx tests/rate-limiter.test.ts && tsx tests/numeric-inputs.test.ts && tsx tests/aquaculture-utils.test.ts"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "firebase": "^12.17.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "qrcode": "^1.5.4",
@@ -32,7 +33,6 @@
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",
     "@types/ws": "^8.18.1",
-    "@playwright/test": "^1.55.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",

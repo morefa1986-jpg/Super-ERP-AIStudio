@@ -14,54 +14,6 @@ export interface FeedCalculationResult {
   tempWarningMessage?: string;
 }
 
-export interface FeedingWaterSafety {
-  canFeed: boolean;
-  isDataValid: boolean;
-  reasons: string[];
-}
-
-const isFiniteNumber = (value: number | undefined | null): value is number =>
-  typeof value === "number" && Number.isFinite(value);
-
-export const evaluateFeedingWaterSafety = (pool: Pool | undefined | null): FeedingWaterSafety => {
-  if (!pool) {
-    return { canFeed: false, isDataValid: false, reasons: ["استخر انتخاب نشده است."] };
-  }
-
-  const reasons: string[] = [];
-  const temp = pool.temperature;
-  const oxygen = pool.oxygenLevel;
-  const ph = pool.phLevel;
-  const thresholds = CENTRAL_THRESHOLDS;
-
-  if (!isFiniteNumber(temp) || temp <= 0 || temp > 40) {
-    reasons.push("دمای آب نامعتبر یا ثبت‌نشده است.");
-  }
-  if (!isFiniteNumber(oxygen) || oxygen <= 0 || oxygen > 30) {
-    reasons.push("اکسیژن محلول نامعتبر یا ثبت‌نشده است.");
-  }
-  if (!isFiniteNumber(ph) || ph <= 0 || ph > 14) {
-    reasons.push("pH آب نامعتبر یا ثبت‌نشده است.");
-  }
-
-  const isDataValid = reasons.length === 0;
-  if (!isDataValid) {
-    return { canFeed: false, isDataValid, reasons };
-  }
-
-  if (temp < 6 || temp > 24) {
-    reasons.push("دمای آب در محدوده قطع کامل تغذیه است.");
-  }
-  if (oxygen <= thresholds.oxygenLevel.criticalMin) {
-    reasons.push("اکسیژن محلول در سطح بحرانی است.");
-  }
-  if (ph <= thresholds.phLevel.criticalMin || ph >= thresholds.phLevel.criticalMax) {
-    reasons.push("pH آب در سطح بحرانی است.");
-  }
-
-  return { canFeed: reasons.length === 0, isDataValid, reasons };
-};
-
 /**
  * Calculates standard sturgeon daily feeding chart percentage.
  * Sturgeon feed rate depends heavily on body weight and temperature:
@@ -226,16 +178,6 @@ export const formatWaterParam = (val: number | undefined | null): string => {
   return parseFloat(Number(val).toFixed(2)).toString();
 };
 
-export const formatRequiredSensorParam = (val: number | undefined | null): string => {
-  if (val === undefined || val === null || isNaN(val) || val <= 0) return "ثبت‌نشده";
-  return formatWaterParam(val);
-};
-
-export const formatRequiredSensorParamWithUnit = (val: number | undefined | null, unit: string): string => {
-  const formatted = formatRequiredSensorParam(val);
-  return formatted === "ثبت‌نشده" ? formatted : `${formatted}${unit}`;
-};
-
 export interface PoolVolumeDetails {
   volumeM3: number;
   pendingVerification: boolean;
@@ -377,3 +319,4 @@ export const calculatePoolVolumeDetails = (pool: Pool): PoolVolumeDetails => {
     capacityStatus
   };
 };
+

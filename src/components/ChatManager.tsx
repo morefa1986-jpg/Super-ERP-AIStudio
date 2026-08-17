@@ -22,7 +22,6 @@ import {
   CheckCheck
 } from "lucide-react";
 import { User as AppUser } from "../types";
-import { getWebSocketUrl } from "../network/connection";
 
 interface ChatMessage {
   id: string;
@@ -107,7 +106,8 @@ export default function ChatManager({ currentUser }: ChatManagerProps) {
     if (!currentUser) return;
 
     // Build URL pointing to the active origin on ws or wss protocol
-    const wsUrl = getWebSocketUrl();
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}`;
     
     console.log("[Chat] Connecting to WebSocket at:", wsUrl);
     const ws = new WebSocket(wsUrl);
@@ -120,8 +120,7 @@ export default function ChatManager({ currentUser }: ChatManagerProps) {
         type: "join",
         userId: currentUser.id,
         username: currentUser.username || "operator",
-        name: currentUser.name || "مدیر شیفت",
-        token: localStorage.getItem("sturgeon_auth_token")
+        name: currentUser.name || "مدیر شیفت"
       }));
     };
 

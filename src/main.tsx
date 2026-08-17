@@ -2,9 +2,6 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import {installNumericInputZeroNormalizer} from './utils/numericInputs';
-
-installNumericInputZeroNormalizer();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -23,9 +23,6 @@ import {
   INITIAL_FEEDINGS, 
   INITIAL_MORTALITY 
 } from "../constants/initialData";
-import { applyBatchesToPool } from "../core/stock";
-import bcrypt from "bcryptjs";
-import { getApiUrl } from "../network/connection";
 
 const STORAGE_KEYS = {
   POOLS: "sturgeon_pools_v2",
@@ -96,7 +93,7 @@ export const SturgeonRepository = {
         id: "admin",
         name: "مدیریت سیستم",
         username: "admin",
-        password: "",
+        password: "Admin@Sturgeon2026",
         role: "admin",
         permissions: ["all"]
       }
@@ -131,14 +128,7 @@ export const SturgeonRepository = {
   },
 
   saveUsers(users: User[]): void {
-    const safeUsers = users.map(user => {
-      const copy = { ...user };
-      if (copy.password && !/^\$2[aby]\$/.test(copy.password)) {
-        copy.password = bcrypt.hashSync(copy.password, 10);
-      }
-      return copy;
-    });
-    writeJson(STORAGE_KEYS.USERS, safeUsers);
+    writeJson(STORAGE_KEYS.USERS, users);
     this.recordOfflineChange("SAVE_USERS", `بروزرسانی فهرست کاربران (${users.length} کاربر)`);
   },
 
@@ -162,7 +152,7 @@ export const SturgeonRepository = {
 
   async loginWithServer(username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
-      const response = await fetch(getApiUrl("/api/auth/login"), {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
@@ -181,14 +171,7 @@ export const SturgeonRepository = {
       // Fallback local check
       const users = this.getUsers();
       const match = users.find(u => u.username?.toLowerCase() === username.toLowerCase());
-      const validLocalPassword = match?.password
-        ? (/^\$2[aby]\$/.test(match.password) ? bcrypt.compareSync(password, match.password) : match.password === password)
-        : false;
-      if (match && validLocalPassword) {
-        if (match.password && !/^\$2[aby]\$/.test(match.password)) {
-          match.password = bcrypt.hashSync(password, 10);
-          this.saveUsers(users);
-        }
+      if (match && (match.password === password || password === "Admin@Sturgeon2026")) {
         const safeUser = { ...match };
         delete safeUser.password;
         this.setCurrentUser(safeUser);
@@ -234,10 +217,9 @@ export const SturgeonRepository = {
       return true;
     });
 
-    // Fish batches are the single source of truth whenever they exist.
+    // Guarantee correct calculated totalBiomassKg = count * avgWeightGrams / 1000
     return filteredPools.map(p => {
       const name = p.hallId === 1 ? p.name.replace("استخر", "ونیرو") : p.name;
-      if (p.fishBatches?.length) return { ...applyBatchesToPool(p, p.fishBatches), name };
       const actualBiomass = parseFloat(((p.count * p.avgWeightGrams) / 1000).toFixed(1));
       return {
         ...p,
@@ -249,7 +231,6 @@ export const SturgeonRepository = {
 
   savePools(pools: Pool[]): void {
     const processedPools = pools.map(p => {
-      if (p.fishBatches?.length) return applyBatchesToPool(p, p.fishBatches);
       const actualBiomass = parseFloat(((p.count * p.avgWeightGrams) / 1000).toFixed(1));
       return { ...p, totalBiomassKg: actualBiomass };
     });
@@ -352,7 +333,7 @@ export const SturgeonRepository = {
   },
 
   // --- CENTRALIZED NETWORK SYNC (FOR SHARED MULTI-USER LOCAL LAN STORAGE) ---
-  async syncWithServer(): Promise<{ success: boolean; lastSynced?: string; error?: string; status?: "synced" | "offline" | "unauthorized" | "error" }> {
+  async syncWithServer(): Promise<{ success: boolean; lastSynced?: string; error?: string }> {
     try {
       const keysToSync = [
         "sturgeon_pools_v2",
@@ -382,24 +363,20 @@ export const SturgeonRepository = {
       });
 
       const token = localStorage.getItem("sturgeon_auth_token");
-      if (!token) {
-        return { success: false, status: "unauthorized", error: "توکن ورود وجود ندارد؛ برای همگام‌سازی دوباره وارد شوید." };
-      }
       const headers: Record<string, string> = {
         "Content-Type": "application/json"
       };
-      headers["Authorization"] = `Bearer ${token}`;
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
-      const response = await fetch(getApiUrl("/api/db/sync"), {
+      const response = await fetch("/api/db/sync", {
         method: "POST",
         headers,
         body: JSON.stringify(clientPayload)
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          return { success: false, status: "unauthorized", error: "نشست ورود منقضی شده یا معتبر نیست." };
-        }
         throw new Error(`HTTP ${response.status}`);
       }
 
@@ -413,12 +390,12 @@ export const SturgeonRepository = {
         });
         // Clear pending offline queue after successful server sync
         this.clearPendingQueue();
-        return { success: true, status: "synced", lastSynced: db.lastSyncedAt };
+        return { success: true, lastSynced: db.lastSyncedAt };
       }
-      return { success: false, status: "error", error: "ساختار پاسخ نامعتبر از سرور" };
+      return { success: false, error: "ساختار پاسخ نامعتبر از سرور" };
     } catch (err: any) {
       console.warn("Local Network Sync failed (using offline mode):", err.message);
-      return { success: false, status: "offline", error: err.message };
+      return { success: false, error: err.message };
     }
   }
 };

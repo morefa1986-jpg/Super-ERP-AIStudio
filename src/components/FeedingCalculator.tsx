@@ -17,7 +17,7 @@ import {
   Thermometer,
   Compass
 } from "lucide-react";
-import { calculateSturgeonFeed, evaluateFeedingWaterSafety, formatRequiredSensorParam, formatRequiredSensorParamWithUnit } from "../utils/aquacultureUtils";
+import { calculateSturgeonFeed, formatWaterParam } from "../utils/aquacultureUtils";
 
 interface FeedingCalculatorProps {
   pools: Pool[];
@@ -64,8 +64,6 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
 
   // Run the biological calculator for the selected pool
   const bioResult = calculateSturgeonFeed(poolAvgWeight, poolTemperature, poolBiomass, poolBreed);
-  const feedingWaterSafety = evaluateFeedingWaterSafety(selectedPool);
-  const feedingLocked = !feedingWaterSafety.canFeed || bioResult.numberOfMeals <= 0 || bioResult.dailyFeedKg <= 0;
 
   // Combine biological calculations with appetite adjustments
   const leftoverKg = parseFloat((prevMealGiven * (1 - eatenPercent / 100)).toFixed(2));
@@ -91,8 +89,8 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
     ? parseFloat((bioResult.dailyFeedKg / bioResult.numberOfMeals).toFixed(2))
     : 0;
 
-  const estimatedNextMeal = feedingLocked ? 0 : parseFloat((
-    singleMealBioRequiredKg > 0
+  const estimatedNextMeal = parseFloat((
+    singleMealBioRequiredKg > 0 
       ? singleMealBioRequiredKg * appetiteMultiplier 
       : prevMealGiven * (eatenPercent / 100) * appetiteMultiplier
   ).toFixed(2));
@@ -107,7 +105,6 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
   // Add estimation record to log
   const handleSaveEstimation = () => {
     if (!selectedPool) return;
-    if (feedingLocked) return;
     
     onAddFeedingLog(
       selectedPool.id, 
@@ -178,15 +175,11 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
                   </div>
                   <div>
                     <span className="text-natural-text/60 font-sans block">آخرین دمای آب ثبت‌شده:</span>
-                    <strong className="text-natural-dark font-mono text-sm">{formatRequiredSensorParamWithUnit(poolTemperature, "°C")}</strong>
+                    <strong className="text-natural-dark font-mono text-sm">{formatWaterParam(poolTemperature)}°C</strong>
                   </div>
                   <div>
                     <span className="text-natural-text/60 font-sans block">اکسیژن پایش:</span>
-                    <strong className="text-natural-dark font-mono text-sm">{formatRequiredSensorParamWithUnit(selectedPool.oxygenLevel, " ppm")}</strong>
-                  </div>
-                  <div>
-                    <span className="text-natural-text/60 font-sans block">pH آب:</span>
-                    <strong className="text-natural-dark font-mono text-sm">{formatRequiredSensorParam(selectedPool.phLevel)}</strong>
+                    <strong className="text-natural-dark font-mono text-sm">{formatWaterParam(selectedPool.oxygenLevel)} ppm</strong>
                   </div>
                 </div>
               )}
@@ -254,19 +247,10 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
                   <div className="flex justify-between items-center">
                     <span>ضریب تعدیل دما و رفتار غریزی:</span>
                     <span className="px-2 py-0.5 rounded bg-white text-[10px] border border-natural-border font-mono text-natural-text">
-                      {feedingLocked ? "قفل ایمنی فعال" : poolTemperature < 12 || poolTemperature > 22 ? "کاهنده اشتها" : "سیستم در محدوده آپتیمم بیولوژیکی"}
+                      {poolTemperature < 12 || poolTemperature > 22 ? "کاهنده اشتها" : "سیستم در محدوده آپتیمم بیولوژیکی"}
                     </span>
                   </div>
                 </div>
-
-                {feedingWaterSafety.reasons.length > 0 && (
-                  <div className="mt-4 p-2.5 rounded-xl text-xs flex gap-1.5 bg-natural-clay/10 text-natural-clay border border-natural-clay/20">
-                    <span className="shrink-0">⛔</span>
-                    <p className="leading-relaxed font-sans">
-                      تغذیه قفل شد: {feedingWaterSafety.reasons.join(" ")}
-                    </p>
-                  </div>
-                )}
 
                 {bioResult.tempWarningMessage && (
                   <div className={`mt-4 p-2.5 rounded-xl text-xs flex gap-1.5 ${appetiteSeverity === "danger" ? "bg-natural-clay/10 text-natural-clay border border-natural-clay/20" : "bg-natural-earth/10 text-natural-earth border border-natural-earth/20"}`}>
@@ -284,9 +268,7 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
                 </div>
                 
                 <p className={`text-[10px] mt-1 font-sans font-medium ${appetiteSeverity === "danger" ? "text-natural-clay" : appetiteSeverity === "warning" ? "text-natural-earth" : "text-natural-forest"}`}>
-                  {feedingLocked
-                    ? "ثبت خوراک و پیشنهاد وعده بعدی تا ورود داده معتبر و خروج از وضعیت بحرانی غیرفعال است."
-                    : eatenPercent === 100
+                  {eatenPercent === 100 
                     ? "خوراک کامل مصرف شد؛ وعده جدید ۵٪ افزایش یافت تا پتانسیل رشد نهایی آزمایش شود." 
                     : eatenPercent >= 90
                       ? "مصرف مطلوب؛ خوراک وعده بعد متناسب با میزان مصرف واقعی گله تعدیل شد."
@@ -304,7 +286,7 @@ export const FeedingCalculator: React.FC<FeedingCalculatorProps> = ({
           </div>
           <button
             onClick={handleSaveEstimation}
-            disabled={!selectedPool || feedingLocked}
+            disabled={!selectedPool}
             className="px-5 py-3 bg-natural-forest hover:bg-natural-forest-hover text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Check size={16} />

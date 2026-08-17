@@ -26,7 +26,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         if (isOpen) onClose();
         else setSearchTerm("");
@@ -66,29 +66,21 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-2xl glass-card-3d border border-cyan-500/40 shadow-2xl bg-slate-950/95 rounded-2xl overflow-hidden flex flex-col max-h-[80vh]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="global-search-title"
-      >
+      <div className="w-full max-w-2xl glass-card-3d border border-cyan-500/40 shadow-2xl bg-slate-950/95 rounded-2xl overflow-hidden flex flex-col max-h-[80vh]">
         
         {/* SEARCH INPUT HEADER */}
         <div className="p-4 border-b border-slate-800 flex items-center gap-3">
           <Search size={20} className="text-cyan-400 shrink-0" />
-          <span id="global-search-title" className="sr-only">جستجوی سراسری</span>
           <input 
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="جستجوی هوشمند (شناسه استخر، کد ونیرو، CITES، میکروچیپ RFID یا بخش‌ها)..."
             className="w-full bg-transparent text-sm text-white placeholder-slate-500 outline-none font-sans"
-            aria-label="عبارت جستجوی سراسری"
             autoFocus
           />
           <button 
             onClick={onClose}
-            aria-label="بستن جستجوی سراسری"
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10"
           >
             <X size={18} />
@@ -171,7 +163,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
         {/* FOOTER SHORTCUT HINT */}
         <div className="p-3 border-t border-slate-800 bg-slate-900/40 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-          <span>برای بسته شدن Esc بزنید</span>
+          <span>برای بسته شدن Esc بمالید</span>
           <span className="flex items-center gap-1">
             میانبر: <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-300">Ctrl + K</kbd>
           </span>

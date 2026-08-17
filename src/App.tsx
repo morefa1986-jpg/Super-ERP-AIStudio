@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { 
   Building2, 
   Layers, 
@@ -59,13 +59,9 @@ import { IoTSensorAlerts } from "./components/IoTSensorAlerts";
 import { GlobalSearchModal } from "./components/GlobalSearchModal";
 import { QrCodeModal } from "./components/QrCodeModal";
 import { OfflineSyncIndicator } from "./components/OfflineSyncIndicator";
-import { InitialStockSetup } from "./components/InitialStockSetup";
 import { SturgeonRepository } from "./storage/repository";
-import { initializePermanentAgents } from "./agents/registry";
-import { applyBatchesToPool, availableStock } from "./core/stock";
 import { LogOut } from "lucide-react";
 import { User } from "./types";
-import bcrypt from "bcryptjs";
 
 // 🚀 Code Splitting & Lazy Loaded Heavy Modules for High Performance & Faster Initial Bundle
 const HallMap = lazy(() => import("./components/HallMap").then(m => ({ default: m.HallMap })));
@@ -95,11 +91,9 @@ const LANG_DICT = {
     logout: "خروج از حساب کاربری",
     syncStatus: "شبکه محلی (LAN Sync)",
     synced: "بروز و متصل",
-    unauthorized: "ورود مجدد لازم است",
     offline: "قطع (آفلاین)",
     map: "نقشه استخرها",
     stats: "آمار بیوماس",
-    realtime: "ثبت آنی و محاسبات استخر",
     feeding: "محاسبه جیره",
     transfer: "دفتر جابه‌جایی",
     mortality: "تلفات مزارع",
@@ -116,20 +110,6 @@ const LANG_DICT = {
     admin: "مدیریت زیرساخت",
     settings: "تنظیمات عمومی",
     chat: "بیسیم و گفتگو",
-    report: "گزارش جامع سیستم و معماری (FA)",
-    departments: "ادارات و بخش‌های جانبی",
-    managementSection: "مدیریت ارشد و تنظیمات عمومی",
-    adminConfig: "پیکربندی عمومی و کالبدی فارم",
-    farmDatabase: "پایگاه اطلاعاتی مزرعه خاویاری فتحی",
-    onlineConnected: "سیستم برخط و متصل",
-    localMode: "حالت محلی / آفلاین",
-    mainNavLabel: "منوی اصلی سامانه",
-    mobileMenuOpen: "باز کردن منوی اصلی",
-    mobileMenuClose: "بستن منوی اصلی",
-    quick: "سریع",
-    live: "برخط",
-    new: "جدید",
-    adminBadge: "ادمین",
     themeMode: "حالت بصری",
     dark: "تاریک",
     light: "روشن",
@@ -142,11 +122,9 @@ const LANG_DICT = {
     logout: "تسجيل الخروج",
     syncStatus: "الشبكة المحلية (LAN Sync)",
     synced: "محدث ومتصل",
-    unauthorized: "يلزم تسجيل الدخول مجددا",
     offline: "منقطع (أوفلاين)",
     map: "خريطة الصالات",
     stats: "إحصائيات البيوماس",
-    realtime: "تسجيل فوري وحسابات الحوض",
     feeding: "حساب العليقة",
     transfer: "دفتر النقل",
     mortality: "نفوق الأسماك",
@@ -163,20 +141,6 @@ const LANG_DICT = {
     admin: "إدارة البنية التحتية",
     settings: "الإعدادات العامة",
     chat: "اللاسلكي والمحادثة",
-    report: "تقرير النظام والبنية (FA)",
-    departments: "الإدارات والأقسام الجانبية",
-    managementSection: "الإدارة العليا والإعدادات",
-    adminConfig: "تهيئة عامة وهيكلية للمزرعة",
-    farmDatabase: "قاعدة بيانات مزرعة فتحي للكافيار",
-    onlineConnected: "النظام متصل ومباشر",
-    localMode: "وضع محلي / أوفلاين",
-    mainNavLabel: "القائمة الرئيسية للنظام",
-    mobileMenuOpen: "فتح القائمة الرئيسية",
-    mobileMenuClose: "إغلاق القائمة الرئيسية",
-    quick: "سريع",
-    live: "مباشر",
-    new: "جديد",
-    adminBadge: "مدير",
     themeMode: "الوضع البصري",
     dark: "داكن",
     light: "مضيء",
@@ -189,11 +153,9 @@ const LANG_DICT = {
     logout: "Log Out",
     syncStatus: "Local LAN Sync",
     synced: "Synced & Connected",
-    unauthorized: "Sign-in Required",
     offline: "Disconnected",
     map: "Halls Map",
     stats: "Biomass Stats",
-    realtime: "Instant Pool Logging",
     feeding: "Feeding Diet",
     transfer: "Transfer Logs",
     mortality: "Mortality Analyzer",
@@ -210,20 +172,6 @@ const LANG_DICT = {
     admin: "Admin Control",
     settings: "System Settings",
     chat: "Intercom & Radio",
-    report: "System & Architecture Report (FA)",
-    departments: "Auxiliary Departments",
-    managementSection: "Senior Management & Settings",
-    adminConfig: "Farm Structure Configuration",
-    farmDatabase: "Fathi Sturgeon Farm Database",
-    onlineConnected: "Online and Connected",
-    localMode: "Local / Offline Mode",
-    mainNavLabel: "Main ERP Navigation",
-    mobileMenuOpen: "Open main menu",
-    mobileMenuClose: "Close main menu",
-    quick: "Quick",
-    live: "Live",
-    new: "New",
-    adminBadge: "Admin",
     themeMode: "Visual Mode",
     dark: "Dark",
     light: "Light",
@@ -236,11 +184,9 @@ const LANG_DICT = {
     logout: "Abmelden",
     syncStatus: "Lokale LAN-Synchronisation",
     synced: "Synchronisiert",
-    unauthorized: "Anmeldung erforderlich",
     offline: "Offline",
     map: "Hallenplan",
     stats: "Biomasse-Statistik",
-    realtime: "Sofortprotokoll",
     feeding: "Futterration",
     transfer: "Umlagerung",
     mortality: "Mortalitätsanalyse",
@@ -257,36 +203,14 @@ const LANG_DICT = {
     admin: "Admin-Bereich",
     settings: "Einstellungen",
     chat: "Intercom & Funk",
-    report: "System- und Architekturbericht (FA)",
-    departments: "Zusätzliche Abteilungen",
-    managementSection: "Leitung und Einstellungen",
-    adminConfig: "Farmstruktur konfigurieren",
-    farmDatabase: "Datenbank der Fathi Störzucht",
-    onlineConnected: "Online und verbunden",
-    localMode: "Lokaler / Offline-Modus",
-    mainNavLabel: "ERP-Hauptnavigation",
-    mobileMenuOpen: "Hauptmenü öffnen",
-    mobileMenuClose: "Hauptmenü schließen",
-    quick: "Schnell",
-    live: "Live",
-    new: "Neu",
-    adminBadge: "Admin",
     themeMode: "Modus",
     dark: "Dunkel",
     light: "Hell",
     lang: "Sprache"
-  },
-  ru: {
-    farmName: "Осетровая ферма Фатхи", subtitle: "ERP-система осетрового хозяйства", observer: "Ответственный оператор:", logout: "Выйти", syncStatus: "Локальная синхронизация", synced: "Синхронизировано", unauthorized: "Требуется вход", offline: "Офлайн", map: "Карта бассейнов", stats: "Биомасса", realtime: "Оперативный журнал", feeding: "Рацион кормления", transfer: "Перемещения", mortality: "Падёж", lab: "Биометрическая лаборатория", archive: "Архив событий", facilities: "Инженерные системы", processing: "Переработка икры", feedmill: "Кормовой цех", inventory: "Центральный склад", accounting: "Финансы", security: "Безопасность", coldstorage: "Холодильник", traceability: "Прослеживаемость", admin: "Администрирование", settings: "Настройки", chat: "Связь", report: "Отчет системы и архитектуры (FA)", departments: "Дополнительные отделы", managementSection: "Руководство и настройки", adminConfig: "Настройка структуры фермы", farmDatabase: "База данных фермы Фатхи", onlineConnected: "Онлайн и подключено", localMode: "Локальный / офлайн режим", mainNavLabel: "Главная навигация ERP", mobileMenuOpen: "Открыть главное меню", mobileMenuClose: "Закрыть главное меню", quick: "Быстро", live: "Онлайн", new: "Новое", adminBadge: "Админ", themeMode: "Тема", dark: "Тёмная", light: "Светлая", lang: "Язык"
   }
 };
 
 export default function App() {
-  const [initialStockCompleted, setInitialStockCompleted] = useState(() => Boolean(localStorage.getItem("sturgeon_initial_stock_completed_v1")));
-
-  useEffect(() => {
-    initializePermanentAgents();
-  }, []);
   // Theme and Language states
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window !== "undefined") {
@@ -296,12 +220,10 @@ export default function App() {
     return "dark";
   });
 
-  const [language, setLanguage] = useState<"fa" | "ar" | "en" | "de" | "ru">(() => {
+  const [language, setLanguage] = useState<"fa" | "ar" | "en" | "de">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sturgeon_lang");
-      if (saved && ["fa", "ar", "en", "de", "ru"].includes(saved)) return saved as "fa" | "ar" | "en" | "de" | "ru";
-      const detected = (navigator.languages?.[0] || navigator.language || "fa").slice(0, 2);
-      return (["fa", "ar", "en", "de", "ru"].includes(detected) ? detected : "fa") as "fa" | "ar" | "en" | "de" | "ru";
+      return (saved as "fa" | "ar" | "en" | "de") || "fa";
     }
     return "fa";
   });
@@ -319,13 +241,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("sturgeon_lang", language);
     const root = document.documentElement;
-    root.classList.remove("lang-fa", "lang-ar", "lang-en", "lang-de", "lang-ru");
-    if (["en", "de", "ru"].includes(language)) {
+    if (["en", "de"].includes(language)) {
       root.setAttribute("dir", "ltr");
       root.classList.add(`lang-${language}`);
+      root.classList.remove("lang-fa", "lang-ar");
     } else {
       root.setAttribute("dir", "rtl");
       root.classList.add(`lang-${language}`);
+      root.classList.remove("lang-en", "lang-de");
     }
     root.setAttribute("lang", language);
   }, [language]);
@@ -421,29 +344,6 @@ export default function App() {
 
   // Navigation states
   const [activeTab, setActiveTab] = useState<"map" | "stats" | "feeding" | "transfer" | "mortality" | "lab" | "archive" | "realtime" | "facilities" | "processing" | "feedmill" | "inventory" | "accounting" | "security" | "coldstorage" | "traceability" | "admin" | "settings" | "chat" | "report">("map");
-  const activeTabTitles: Record<typeof activeTab, string> = {
-    map: activeTranslations.map,
-    stats: activeTranslations.stats,
-    realtime: activeTranslations.realtime,
-    feeding: activeTranslations.feeding,
-    transfer: activeTranslations.transfer,
-    mortality: activeTranslations.mortality,
-    lab: activeTranslations.lab,
-    archive: activeTranslations.archive,
-    facilities: activeTranslations.facilities,
-    processing: activeTranslations.processing,
-    feedmill: activeTranslations.feedmill,
-    inventory: activeTranslations.inventory,
-    accounting: activeTranslations.accounting,
-    security: activeTranslations.security,
-    coldstorage: activeTranslations.coldstorage,
-    traceability: activeTranslations.traceability,
-    admin: activeTranslations.admin,
-    settings: activeTranslations.settings,
-    chat: activeTranslations.chat,
-    report: activeTranslations.report
-  };
-  const activeTabTitle = activeTabTitles[activeTab];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [selectedHallId, setSelectedHallId] = useState<number>(1);
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
@@ -457,38 +357,13 @@ export default function App() {
     citesBatch?: any;
   }>({ isOpen: false });
 
-  useEffect(() => {
-    const handleGlobalShortcuts = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setIsSearchOpen(open => !open);
-      }
-    };
-
-    window.addEventListener("keydown", handleGlobalShortcuts);
-    return () => window.removeEventListener("keydown", handleGlobalShortcuts);
-  }, []);
-
-  const [syncState, setSyncState] = useState<"synced" | "offline" | "unauthorized" | "error">("offline");
-  const unauthorizedSyncTokenRef = useRef<string | null>(null);
+  const [syncState, setSyncState] = useState<"synced" | "offline">("synced");
 
   // Run central network sync check every 10 seconds
   useEffect(() => {
     const runNetworkSync = async () => {
-      const token = localStorage.getItem("sturgeon_auth_token");
-      if (token && unauthorizedSyncTokenRef.current === token) {
-        setSyncState("unauthorized");
-        return;
-      }
-
       const result = await SturgeonRepository.syncWithServer();
-      setSyncState(result.success ? "synced" : result.status || "offline");
-      if (result.status === "unauthorized") {
-        unauthorizedSyncTokenRef.current = token;
-      } else {
-        unauthorizedSyncTokenRef.current = null;
-      }
-
+      setSyncState(result.success ? "synced" : "offline");
       if (result.success) {
         // Update local React states to match what was returned from server/merged in localStorage
         const savedPools = localStorage.getItem("sturgeon_pools");
@@ -525,11 +400,8 @@ export default function App() {
       const initializeClient = async () => {
         try {
           // Attempt to pull the central server database first to avoid overwriting it
-          const token = localStorage.getItem("sturgeon_auth_token");
-          const response = token
-            ? await fetch("/api/db/sync", { headers: { Authorization: `Bearer ${token}` } })
-            : null;
-          if (response?.ok) {
+          const response = await fetch("/api/db/sync");
+          if (response.ok) {
             const data = await response.json();
             if (data && data.success && data.db) {
               const db = data.db;
@@ -574,20 +446,18 @@ export default function App() {
         localStorage.clear();
         localStorage.setItem("sturgeon_raw_v4", "true");
         
-        // Seed default admin user with a one-time local password so no credential is published in source.
-        const temporaryAdminPassword = crypto.randomUUID().slice(0, 12);
+        // Seed default admin user so they can login after clear
         const defaultUsers = [
           {
             id: "admin",
             name: "مدیریت سیستم",
             username: "admin",
-            password: bcrypt.hashSync(temporaryAdminPassword, 10),
+            password: "Admin@Sturgeon2026",
             role: "admin",
             permissions: ["all"]
           }
         ];
         localStorage.setItem("sturgeon_users_v2", JSON.stringify(defaultUsers));
-        alert(`رمز موقت مدیر سیستم برای همین نصب محلی: ${temporaryAdminPassword}\nپس از ورود، رمز را از پنل مدیریت تغییر دهید.`);
         
         setPools(INITIAL_POOLS);
         setHalls(INITIAL_HALLS);
@@ -1087,10 +957,6 @@ export default function App() {
     const transferAvgWeight = avgWeight && avgWeight > 0 ? avgWeight : source.avgWeightGrams;
     const transferGender = gender || "نامشخص / ترکیبی";
 
-    if (amount <= 0 || availableStock(source, transferBreed) < amount) {
-      return false;
-    }
-
     setPools(prevPools => {
       return prevPools.map(pool => {
         // Reduct from primary source pool
@@ -1108,6 +974,18 @@ export default function App() {
               }
               return b;
             }).filter(b => b.count > 0);
+
+            // Self-healing check: If we still have remainingToDeduct, deduct from other batches
+            if (remainingToDeduct > 0) {
+              updatedBatches = updatedBatches.map(b => {
+                if (remainingToDeduct > 0) {
+                  const deductFromThis = Math.min(b.count, remainingToDeduct);
+                  remainingToDeduct -= deductFromThis;
+                  return { ...b, count: b.count - deductFromThis };
+                }
+                return b;
+              }).filter(b => b.count > 0);
+            }
 
             // Ensure the sum of batches matches newCount exactly
             const batchSum = updatedBatches.reduce((acc, b) => acc + b.count, 0);
@@ -1309,29 +1187,26 @@ export default function App() {
   const handleAddMortalityRecord = (
     poolId: string,
     count: number,
-    breed: SturgeonBreed,
-    gender: string,
     symptoms: string,
     explanation: string,
     photoUrl: string,
     aiAction: string
-  ): boolean => {
+  ) => {
     const pool = pools.find(p => p.id === poolId);
-    if (!pool || count <= 0 || availableStock(pool, breed, gender) < count) return false;
+    if (!pool) return;
+
+    const actualDiff = Math.min(count, pool.count);
 
     // Reduct count from active pool immediately
     setPools(prevPools => {
       return prevPools.map(p => {
         if (p.id === poolId) {
-          let remaining = count;
-          const sourceBatches = p.fishBatches?.length ? p.fishBatches : [{ id: `legacy-${p.id}`, breed: p.breed, gender: "unknown", count: p.count, avgWeightGrams: p.avgWeightGrams }];
-          const batches = sourceBatches.map(batch => {
-            if (batch.breed !== breed || batch.gender !== gender || remaining === 0) return batch;
-            const deducted = Math.min(batch.count, remaining);
-            remaining -= deducted;
-            return { ...batch, count: batch.count - deducted };
-          });
-          return applyBatchesToPool(p, batches);
+          const finalCount = Math.max(0, p.count - actualDiff);
+          return {
+            ...p,
+            count: finalCount,
+            totalBiomassKg: parseFloat(((finalCount * p.avgWeightGrams) / 1000).toFixed(1))
+          };
         }
         return p;
       });
@@ -1341,12 +1216,10 @@ export default function App() {
       id: `mort-${Date.now().toString().slice(-4)}`,
       poolId,
       poolName: `${pool.name} (سالن ${pool.hallId})`,
-      count,
-      breed,
-      gender,
+      count: actualDiff,
       date: getPersianDate(),
       avgWeightGrams: pool.avgWeightGrams,
-      totalLossKg: parseFloat(((count * pool.avgWeightGrams) / 1000).toFixed(2)),
+      totalLossKg: parseFloat(((actualDiff * pool.avgWeightGrams) / 1000).toFixed(2)),
       reason: symptoms.split(" ")[0] || "نامشخص",
       symptoms,
       photoUrl,
@@ -1355,7 +1228,6 @@ export default function App() {
     };
 
     setMortalityLogs(prev => [newMortalityLog, ...prev]);
-    return true;
   };
 
   // Reset farm to defaults if manager requests refresh
@@ -1363,20 +1235,18 @@ export default function App() {
     if (window.confirm("آیا از بازنشانی مجدد اطلاعات فارم خاویاری به داده‌های خام مطمئن هستید؟")) {
       localStorage.clear();
       
-      // Seed default admin user with a one-time local password so no credential is published in source.
-      const temporaryAdminPassword = crypto.randomUUID().slice(0, 12);
+      // Seed default admin user so they can login after clear
       const defaultUsers = [
         {
           id: "admin",
           name: "مدیریت سیستم",
           username: "admin",
-        password: bcrypt.hashSync(temporaryAdminPassword, 10),
+          password: "Admin@Sturgeon2026",
           role: "admin",
           permissions: ["all"]
         }
       ];
       localStorage.setItem("sturgeon_users_v2", JSON.stringify(defaultUsers));
-      alert(`رمز موقت مدیر سیستم برای همین نصب محلی: ${temporaryAdminPassword}\nپس از ورود، رمز را از پنل مدیریت تغییر دهید.`);
       localStorage.setItem("sturgeon_raw_v4", "true");
 
       setHalls(INITIAL_HALLS);
@@ -1394,26 +1264,11 @@ export default function App() {
   const totalDeadCount = mortalityLogs.reduce((acc, curr) => acc + curr.count, 0);
 
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} onLanguageChange={(next) => setLanguage(next)} />;
-  }
-
-  if (!initialStockCompleted) {
-    return (
-      <InitialStockSetup
-        pools={pools}
-        halls={halls}
-        currentUser={currentUser}
-        onComplete={(initializedPools) => {
-          SturgeonRepository.savePools(initializedPools);
-          setPools(initializedPools);
-          setInitialStockCompleted(true);
-        }}
-      />
-    );
+    return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
 
   return (
-    <div className="min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout">
+    <div className="min-h-screen bg-natural-bg text-natural-text flex flex-col md:flex-row font-sans relative overflow-x-hidden" id="main-layout" dir="rtl">
       {/* 🌌 AMBIENT 3D BACKGROUND GLOW ORBS */}
       <div className="ambient-orb-1" />
       <div className="ambient-orb-2" />
@@ -1449,7 +1304,6 @@ export default function App() {
             {/* Mobile close trigger button */}
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              aria-label={activeTranslations.mobileMenuClose}
               className="p-1 px-1.5 md:hidden hover:bg-natural-khaki rounded-xl text-natural-text transition-colors cursor-pointer border border-natural-border/50"
             >
               <X size={18} />
@@ -1459,7 +1313,7 @@ export default function App() {
           {/* Connected User Badge */}
           <div className="p-3 bg-natural-khaki/50 rounded-2xl border border-natural-border/60 text-xs space-y-2">
             <div>
-              <span className="text-[9px] text-[#2D4A3E]/60 block font-semibold">{activeTranslations.observer}</span>
+              <span className="text-[9px] text-[#2D4A3E]/60 block font-semibold">ناظر مسئول برخط:</span>
               <strong className="text-natural-dark text-[11px] font-bold block truncate mt-0.5" title={currentUser?.name || "مدیر کارگاه"}>
                 {currentUser?.name || "مدیر کارگاه"}
               </strong>
@@ -1471,7 +1325,7 @@ export default function App() {
               className="w-full py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] rounded-xl flex items-center justify-center gap-1.5 transition-all font-black cursor-pointer"
             >
               <LogOut size={11} />
-              {activeTranslations.logout}
+              خروج از حساب کاربری
             </button>
           </div>
 
@@ -1523,7 +1377,6 @@ export default function App() {
                 <option value="ar" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">العربية</option>
                 <option value="en" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">English</option>
                 <option value="de" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">Deutsch</option>
-                <option value="ru" className="bg-slate-900 text-slate-100 light:bg-white light:text-slate-900">Русский</option>
               </select>
             </div>
           </div>
@@ -1532,22 +1385,17 @@ export default function App() {
           <div className="flex items-center justify-between p-3 bg-white border border-natural-border/65 rounded-2xl text-[10px] font-bold shadow-sm">
             <span className="text-natural-text/70 flex items-center gap-1.5">
               <Server size={12} className="text-natural-forest shrink-0" />
-              {activeTranslations.syncStatus}
+              شبکه محلی (LAN Sync)
             </span>
             {syncState === "synced" ? (
               <span className="text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full text-[9px]">
                 <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-ping"></span>
-                {activeTranslations.synced}
-              </span>
-            ) : syncState === "unauthorized" ? (
-              <span className="text-amber-700 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full text-[9px]">
-                <span className="w-1.5 h-1.5 bg-amber-600 rounded-full"></span>
-                {activeTranslations.unauthorized}
+                بروز و متصل
               </span>
             ) : (
               <span className="text-rose-700 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-full text-[9px]">
                 <span className="w-1.5 h-1.5 bg-rose-600 rounded-full"></span>
-                {activeTranslations.offline}
+                قطع (آفلاین)
               </span>
             )}
           </div>
@@ -1561,7 +1409,7 @@ export default function App() {
           />
 
           {/* Primary Navigation Options */}
-          <nav className="space-y-1" aria-label={activeTranslations.mainNavLabel}>
+          <nav className="space-y-1" aria-label="منوی اصلی سامانه">
             {hasTabPermission("map") && (
               <button
                 onClick={() => { setActiveTab("map"); setIsMobileMenuOpen(false); }}
@@ -1600,9 +1448,9 @@ export default function App() {
                 }`}
               >
                 <PlusCircle size={16} />
-                {activeTranslations.realtime}
+                {language === "fa" ? "ثبت آنی و محاسبات استخر" : language === "ar" ? "التسجيل الفوري والمحاسبة" : "Instant Logger & Dimensions"}
                 <span className="bg-amber-100 text-amber-900 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                  {activeTranslations.quick}
+                  {language === "en" || language === "de" ? "Live" : "سریع"}
                 </span>
               </button>
             )}
@@ -1633,7 +1481,7 @@ export default function App() {
                 <FlaskConical size={16} />
                 {activeTranslations.lab}
                 <span className="bg-emerald-800 text-[#FDFCF8] text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                  {activeTranslations.new}
+                  {language === "en" || language === "de" ? "New" : "جدید"}
                 </span>
               </button>
             )}
@@ -1695,7 +1543,7 @@ export default function App() {
               hasTabPermission("accounting") || 
               hasTabPermission("security") || 
               hasTabPermission("chat")) && (
-              <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-natural-text/40 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right">{activeTranslations.departments}</div>
+              <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-natural-text/40 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right">ادارات و بخش‌های جانبی</div>
             )}
 
             {/* 🌾 FEED MILL */}
@@ -1709,7 +1557,7 @@ export default function App() {
                 }`}
               >
                 <Wheat size={16} />
-                {activeTranslations.feedmill}
+                کارخانه خوراک
               </button>
             )}
 
@@ -1724,7 +1572,7 @@ export default function App() {
                 }`}
               >
                 <Warehouse size={16} />
-                {activeTranslations.inventory}
+                بخش انبارداری
               </button>
             )}
 
@@ -1739,7 +1587,7 @@ export default function App() {
                 }`}
               >
                 <Factory size={16} />
-                {activeTranslations.processing}
+                کارخانه فراوری
               </button>
             )}
 
@@ -1754,7 +1602,7 @@ export default function App() {
                 }`}
               >
                 <Snowflake size={16} />
-                {activeTranslations.coldstorage}
+                سردخانه مرکزی
               </button>
             )}
 
@@ -1769,7 +1617,7 @@ export default function App() {
                 }`}
               >
                 <Cpu size={16} />
-                {activeTranslations.facilities}
+                بخش تأسیسات
               </button>
             )}
 
@@ -1784,7 +1632,7 @@ export default function App() {
                 }`}
               >
                 <Fingerprint size={16} className="text-indigo-500" />
-                {activeTranslations.traceability}
+                زنجیره تأمین و رهگیری
               </button>
             )}
 
@@ -1799,7 +1647,7 @@ export default function App() {
                 }`}
               >
                 <Coins size={16} />
-                {activeTranslations.accounting}
+                حسابداری مالی
               </button>
             )}
 
@@ -1814,7 +1662,7 @@ export default function App() {
                 }`}
               >
                 <Shield size={16} />
-                {activeTranslations.security}
+                نگهبانی و حراست
               </button>
             )}
 
@@ -1829,9 +1677,9 @@ export default function App() {
                 }`}
               >
                 <MessageSquare size={16} className={activeTab === "chat" ? "text-white" : "text-[#8C6A43]"} />
-                {activeTranslations.chat}
+                سامانه گفتگو و تماس بیسیم
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black animate-pulse">
-                  {activeTranslations.live}
+                  برخط
                 </span>
               </button>
             )}
@@ -1846,7 +1694,7 @@ export default function App() {
               }`}
             >
               <FileText size={16} className="text-cyan-400" />
-              {activeTranslations.report}
+              گزارش جامع سیستم و معماری (FA)
               <span className="bg-cyan-500/20 text-cyan-300 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
                 v4.5
               </span>
@@ -1857,7 +1705,7 @@ export default function App() {
               <>
                 <div className="px-3.5 pt-4 pb-2 text-[9px] font-black text-red-700/60 tracking-wider font-sans border-t border-natural-border/30 mt-3 uppercase text-right flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  {activeTranslations.managementSection}
+                  مدیریت ارشد و تنظیمات عمومی
                 </div>
      
                 <button
@@ -1869,10 +1717,10 @@ export default function App() {
                   }`}
                 >
                   <Shield size={16} className={activeTab === "admin" ? "text-white" : "text-red-750"} />
-                  {activeTranslations.adminConfig}
+                  پیکربندی عمومی و کالبدی فارم
                   {currentUser?.role === "admin" && (
                     <span className="bg-red-100 text-red-850 text-[8px] px-1.5 py-0.5 rounded-full mr-auto font-sans font-black">
-                      {activeTranslations.adminBadge}
+                      ادمین
                     </span>
                   )}
                 </button>
@@ -1908,18 +1756,36 @@ export default function App() {
               <Waves className="animate-pulse" size={16} />
             </div>
             <div>
-              <span className="text-xs font-black text-natural-dark block leading-none">{activeTranslations.farmName}</span>
-              <span className="text-[8px] text-natural-text/50 mt-1 block leading-none">{activeTranslations.subtitle}</span>
+              <span className="text-xs font-black text-natural-dark block leading-none">مزرعه خاویاری فتحی</span>
+              <span className="text-[8px] text-natural-text/50 mt-1 block leading-none">سامانه پایش هوشمند گله‌ها</span>
             </div>
           </div>
 
           <div className="bg-natural-khaki border border-natural-border/80 px-2.5 py-1 rounded-full text-[9px] font-bold text-natural-dark">
-            {activeTabTitle}
+            {activeTab === "map" && "نقشه استخرها"}
+            {activeTab === "realtime" && "ثبت آنی استخر"}
+            {activeTab === "stats" && "آمار بیوماس"}
+            {activeTab === "feeding" && "محاسبه جیره"}
+            {activeTab === "transfer" && "دفتر جابه‌جایی"}
+            {activeTab === "mortality" && "تلفات مزارع"}
+            {activeTab === "lab" && "آزمایشگاه بیومتر"}
+            {activeTab === "archive" && "بایگانی وقایع"}
+            {activeTab === "facilities" && "بخش تأسیسات"}
+            {activeTab === "processing" && "کارخانه فراوری"}
+            {activeTab === "feedmill" && "کارخانه خوراک"}
+            {activeTab === "inventory" && "بخش انبارداری"}
+            {activeTab === "accounting" && "حسابداری مالی"}
+            {activeTab === "security" && "نگهبانی و حراست"}
+            {activeTab === "coldstorage" && "سردخانه کارگاه"}
+            {activeTab === "traceability" && "زنجیره تأمین و رهگیری"}
+            {activeTab === "admin" && "مدیریت زیرساخت"}
+            {activeTab === "settings" && "تنظیمات عمومی"}
+            {activeTab === "chat" && "بیسیم و گفتگو"}
+            {activeTab === "report" && "گزارش سیستم"}
           </div>
 
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            aria-label={activeTranslations.mobileMenuOpen}
             className="p-1 px-1.5 bg-natural-khaki text-natural-dark hover:bg-natural-khaki/80 rounded-xl transition-all cursor-pointer border border-natural-border/70"
           >
             <Menu size={18} />
@@ -1931,14 +1797,31 @@ export default function App() {
           <div className="flex justify-between items-center bg-white border border-natural-border rounded-3xl p-5 shadow-sm">
             <div>
               <div className="flex items-center gap-2 text-[10px] text-natural-earth font-black select-none">
-                <span>{activeTranslations.farmDatabase}</span>
+                <span>پایگاه اطلاعاتی مزرعه خاویاری فتحی</span>
                 <span>•</span>
-              <span className={syncState === "synced" ? "text-emerald-700 animate-pulse" : "text-rose-700"}>
-                {syncState === "synced" ? activeTranslations.onlineConnected : syncState === "unauthorized" ? activeTranslations.unauthorized : activeTranslations.localMode}
-              </span>
+                <span className="text-emerald-700 animate-pulse">سیستم برخط و متصل</span>
               </div>
               <h2 className="text-lg font-black text-natural-dark font-sans mt-1">
-                {activeTabTitle}
+                {activeTab === "map" && "نقشه سالن‌ها و استخرها"}
+                {activeTab === "realtime" && "برگه ثبت آنی وقایع، خوراک‌دهی، تبارشناسی و ابعاد هیدرولیک استخر"}
+                {activeTab === "stats" && "جدول بیوماس و آمار کلی فارم خاویاری"}
+                {activeTab === "feeding" && "محاسبه علمی جیره غذایی روزانه گله (FCR)"}
+                {activeTab === "transfer" && "دفتر ثبت انتقالات تبارشناسی و ردیابی جابجایی تانک ها"}
+                {activeTab === "mortality" && "تلفات فارم و عیب‌یابی فوق هوشمند با تکنولوژی [Gemini]"}
+                {activeTab === "lab" && "آزمایشگاه تخصصی کنترل کیفی هیدروشیمی و سونوگرافی جنسی"}
+                {activeTab === "archive" && "دفتر بایگانی کارگاهی، گزارش‌های آزمایشگاه و کارتابل وقایع"}
+                {activeTab === "facilities" && "سامانه مانیتورینگ تأسیسات زیربنایی و تصفیه‌خانه مرکزی آب"}
+                {activeTab === "processing" && "سیستم فرآوری، صید، نمک‌سود کاری و بسته‌بندی خاویار صادراتی"}
+                {activeTab === "feedmill" && "خط تولید خوراک متراکم، کالیبراسیون اکسترودر و آنالیز فیزیکی پلت"}
+                {activeTab === "inventory" && "مدیریت کاردکس کالا، موجودی انبار مرکزی و حواله‌های فیزیکی"}
+                {activeTab === "accounting" && "دفتر روزنامه حسابداری، تراز مالی و بهای تمام‌شده بیوماس شناور"}
+                {activeTab === "security" && "سامانه دژبانی حراست، ثبت تردد گیت اصلی و حصار الکترومغناطیسی"}
+                {activeTab === "coldstorage" && "پایش هوشمند دمای یخچال‌ها، فریزرها و مدیریت کاردکس سردخانه"}
+                {activeTab === "traceability" && "رهگیری زنده کالا از بدو ورود، تولید خوراک، دوزهای تغذیه تا فرآوری، انجماد و فروش"}
+                {activeTab === "admin" && "پنل دسترسی ارشد مدیریت و پیکربندی توسعه کالبدی مزارع"}
+                {activeTab === "settings" && "تنظیمات عمومی، برندینگ شیلات و پیکربندی آستانه‌های اکولوژیک"}
+                {activeTab === "chat" && "سامانه درون‌کارگاهی گفتگو، ارسال فایل، ضبط صدا و تماس‌های صوتی/تصویری بیسیم"}
+                {activeTab === "report" && "گزارش جامع معماری، قابلیت‌ها و سند سیستم FATHI AQUA SUPER ERP"}
               </h2>
             </div>
 

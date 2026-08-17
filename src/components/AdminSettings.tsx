@@ -254,10 +254,6 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       showToast("لطفاً تمام مشخصات پرسنل را به دقت وارد کنید.", "error");
       return;
     }
-    if (newStaffPassword.trim().length < 8) {
-      showToast("رمز عبور باید حداقل ۸ کاراکتر باشد.", "error");
-      return;
-    }
 
     const usernameLower = newStaffUsername.trim().toLowerCase();
     if (userList.some(u => u.username?.toLowerCase() === usernameLower)) {
@@ -303,8 +299,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   };
 
   const handleUpdatePassword = (userId: string) => {
-    if (tempPassword.trim().length < 8) {
-      showToast("رمز عبور جدید باید حداقل ۸ کاراکتر باشد.", "error");
+    if (!tempPassword.trim()) {
+      showToast("رمز عبور جدید نمی‌تواند خالی باشد.", "error");
       return;
     }
     const userToUpdate = userList.find(u => u.id === userId);
@@ -673,7 +669,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   });
 
   return (
-    <div className="bg-white border border-natural-border rounded-3xl p-6 shadow-sm space-y-6 animate-fadeIn text-start" id="admin-management-panel">
+    <div className="bg-white border border-natural-border rounded-3xl p-6 shadow-sm space-y-6 animate-fadeIn text-right" dir="rtl" id="admin-management-panel">
       
       {/* Toast Notification Widget */}
       {toast && (
@@ -752,7 +748,6 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   </p>
                   <input 
                     type="text"
-                    required
                     value={activeConfirmation.verificationText}
                     onChange={(e) => setActiveConfirmation({
                       ...activeConfirmation,
@@ -1091,7 +1086,6 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   <label className="text-[10.5px] font-bold text-natural-dark block">کاربری هیدرولیک</label>
                   <input 
                     type="text"
-                    required
                     value={newPoolPurpose}
                     onChange={(e) => setNewPoolPurpose(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-natural-border bg-white focus:outline-none focus:border-natural-forest"
@@ -1444,11 +1438,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-[10.5px] font-bold text-natural-dark block">رمز عبور ورود</label>
                   <input 
-                    type="password"
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                    placeholder="حداقل ۸ کاراکتر"
+                    type="text"
+                    placeholder="مثال: 5678"
                     value={newStaffPassword}
                     onChange={(e) => setNewStaffPassword(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-natural-border bg-white focus:outline-none focus:border-[#D68227] font-mono text-left"
@@ -1662,9 +1653,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                           <div className="flex justify-between items-center gap-2">
                             <span className="text-natural-text/60 font-sans text-[9px]">رمز عبور جدید:</span>
                             <input
-                              type="password"
-                              minLength={8}
-                              autoComplete="new-password"
+                              type="text"
                               value={tempPassword}
                               onChange={(e) => setTempPassword(e.target.value)}
                               placeholder="رمز جدید"
@@ -1695,15 +1684,15 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                             <span className="text-natural-text/60 font-sans text-[9px]">نام کاربری ورود:</span>
                             <strong className="text-natural-dark font-bold">{user.username || "نامشخص"}</strong>
                           </div>
-                              <div className="flex justify-between items-center">
-                                <div className="flex gap-1.5 items-center">
-                                  <span className="text-natural-text/60 font-sans text-[9px]">رمز ورود:</span>
-                                  <strong className="text-natural-dark font-bold">ذخیره‌شده و مخفی</strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    setEditingPasswordUserId(user.id);
-                                    setTempPassword("");
+                          <div className="flex justify-between items-center">
+                            <div className="flex gap-1.5 items-center">
+                              <span className="text-natural-text/60 font-sans text-[9px]">رمز ورود:</span>
+                              <strong className="text-natural-dark font-bold">{user.password || "••••"}</strong>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingPasswordUserId(user.id);
+                                setTempPassword(user.password || "");
                               }}
                               className="text-[#D68227] hover:underline font-bold text-[9.5px] font-sans cursor-pointer"
                             >

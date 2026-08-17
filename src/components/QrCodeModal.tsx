@@ -57,7 +57,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
         serial: citesBatch.tinSerial
       });
     } else {
-      payloadString = JSON.stringify({ farm: "FATHI AQUA STURGEON FARM", type: "OFFLINE_LOCAL_ID", version: 1 });
+      payloadString = "https://fathi-sturgeon-farm.ir/verify";
     }
 
     QRCode.toDataURL(payloadString, {
@@ -72,19 +72,6 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
       .catch(err => console.error("QR Code error:", err));
   }, [isOpen, pool, citesBatch]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -93,12 +80,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-md glass-card-3d border border-cyan-500/40 shadow-2xl bg-slate-950/95 rounded-3xl overflow-hidden text-white"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qr-code-title"
-      >
+      <div className="w-full max-w-md glass-card-3d border border-cyan-500/40 shadow-2xl bg-slate-950/95 rounded-3xl overflow-hidden text-white">
         
         {/* HEADER */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between no-print">
@@ -106,13 +88,12 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
             <div className="p-2 bg-cyan-500 text-slate-950 rounded-xl font-black">
               <QrCode size={18} />
             </div>
-            <h3 id="qr-code-title" className="text-sm font-black font-sans">
+            <h3 className="text-sm font-black font-sans">
               {pool ? "شناسنامه پویای QR Code استخر" : "گواهی دیجیتال CITES قوطی خاویار"}
             </h3>
           </div>
           <button 
             onClick={onClose}
-            aria-label="بستن پنجره QR"
             className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800"
           >
             <X size={18} />

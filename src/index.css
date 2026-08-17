@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Vazirmatn:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -172,6 +173,10 @@ html:not(.light) {
   .bg-\[\#FAF9F5\],
   .bg-\[\#FAF0E6\],
   .bg-\[\#F5F2E8\],
+  .bg-[#FDFCF8],
+  .bg-[#FAF9F5],
+  .bg-[#FAF0E6],
+  .bg-[#F5F2E8],
   .bg-neutral-50,
   .bg-neutral-100,
   .bg-neutral-200,
@@ -191,7 +196,10 @@ html:not(.light) {
 
   /* Make inner cards with bg-[#FAF9F5] have a deeper background to contrast nicely with the column's bg */
   .bg-\[\#FAF9F5\],
+  .bg-[#FAF9F5],
   .bg-\[\#FAF9F5\]\/50,
+  .bg-[#FAF9F5]/50,
+  .bg-[#FAF9F5]/80,
   .bg-white\/80 {
     background-color: var(--natural-bg) !important;
   }
@@ -613,3 +621,4 @@ body {
   z-index: 0;
   animation: ambientSweep 16s ease-in-out infinite reverse;
 }
+

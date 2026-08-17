@@ -24,7 +24,6 @@ import {
   Trash2
 } from "lucide-react";
 import { Pool } from "../types";
-import OfficeAccountingSuite from "./OfficeAccountingSuite";
 
 interface ExtraDepartmentsManagerProps {
   pools: Pool[];
@@ -2127,7 +2126,6 @@ export default function ExtraDepartmentsManager({ pools, activeDepartment }: Ext
 
       {activeDepartment === "accounting" && (
         <div className="space-y-6" id="dept-accounting-section">
-          <OfficeAccountingSuite />
           <div className="bg-white border border-natural-border p-5 rounded-3xl space-y-2">
             <div className="flex items-center gap-2 text-amber-600 font-extrabold text-xs">
               <Coins size={16} />

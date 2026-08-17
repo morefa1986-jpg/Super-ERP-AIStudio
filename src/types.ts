@@ -58,45 +58,16 @@ export interface FishBatch {
   gender: string;
   count: number;
   avgWeightGrams: number;
-  chipIds?: string[];
-  initializedAt?: string;
   notes?: string;
-}
-
-export interface StockInitializationRecord {
-  id: string;
-  poolId: string;
-  batches: FishBatch[];
-  totalCount: number;
-  totalBiomassKg: number;
-  initializedBy: string;
-  initializedAt: string;
-  reason: "initial-stock" | "migration";
-}
-
-export interface BackupEnvelope {
-  format: "fathi-aqua-backup";
-  schemaVersion: number;
-  appVersion: string;
-  createdAt: string;
-  createdBy: string;
-  checksum: string;
-  data: Record<string, unknown>;
 }
 
 export interface Pool {
   id: string; // hXpY traceable pattern
   name: string;
   hallId: number;
-  shape?: "circular" | "rectangular" | "linear" | "other";
   diameter?: number; // in meters
-  length?: number; // in meters
-  width?: number; // in meters
   dimensionsDesc: string; // e.g. "قطر ۴ متر"
   height?: number; // in meters
-  volumeCubicMeters?: number;
-  maxBiomassKg?: number;
-  waterSource?: string;
   purpose: string; // PoolPurpose or custom
   breed: SturgeonBreed;
   count: number;
@@ -182,8 +153,6 @@ export interface MortalityLog {
   poolId: string;
   poolName: string;
   count: number;
-  breed?: SturgeonBreed;
-  gender?: string;
   date: string; // Jalali
   dateGregorian?: string;
   avgWeightGrams: number;

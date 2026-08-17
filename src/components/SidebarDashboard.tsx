@@ -469,7 +469,7 @@ export const SidebarDashboard: React.FC<SidebarDashboardProps> = ({
 
       {/* 🛠️ DIALOG / MODAL FOR PERSONALIZING SIDEBAR DASHBOARD OPTIONS */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 bg-[#1A2E26]/65 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 bg-[#1A2E26]/65 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn" dir="rtl">
           <div className="bg-white rounded-3xl border border-natural-border shadow-xl w-full max-w-md p-6 overflow-hidden max-h-[90vh] flex flex-col text-right">
             
             {/* Modal Header */}
