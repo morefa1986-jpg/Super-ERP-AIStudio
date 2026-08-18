@@ -1,0 +1,79 @@
+/* User-friendly daily mode: reduce visual noise without deleting farm data or core modules. */
+
+/* Remove duplicate/secondary dashboard inside the sidebar. */
+#sidebar-dashboard-widget {
+  display: none !important;
+}
+
+/* Keep theme/language available from settings rather than occupying daily navigation space. */
+#theme-lang-controls {
+  display: none !important;
+}
+
+/* Reporting remains available from relevant modules; hide the oversized global toolbar. */
+#export-and-print-toolbar {
+  display: none !important;
+}
+
+/* Remove decorative background effects that compete with operational data. */
+#main-layout .ambient-orb-1,
+#main-layout .ambient-orb-2 {
+  display: none !important;
+}
+
+/* Make the primary sidebar calmer and denser. */
+#main-layout aside {
+  width: 15.5rem !important;
+  padding: 0.85rem !important;
+}
+
+#main-layout aside > div {
+  gap: 0.75rem !important;
+}
+
+#main-layout aside nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+#main-layout aside nav button {
+  min-height: 2.55rem;
+  padding-block: 0.6rem !important;
+  border-radius: 0.75rem !important;
+}
+
+/* Reduce excessive top-level spacing so users see operational content sooner. */
+#main-layout main {
+  padding-top: 1rem !important;
+}
+
+#dynamic-module-viewport {
+  scroll-margin-top: 1rem;
+}
+
+/* Improve keyboard/focus usability. */
+#main-layout button:focus-visible,
+#main-layout select:focus-visible,
+#main-layout input:focus-visible,
+#main-layout textarea:focus-visible {
+  outline: 2px solid #22d3ee !important;
+  outline-offset: 2px;
+}
+
+/* Make important operational tables and forms easier to scan. */
+#main-layout table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+@media (max-width: 767px) {
+  #main-layout aside {
+    width: min(88vw, 19rem) !important;
+  }
+
+  #main-layout main {
+    padding: 0.75rem !important;
+  }
+}
